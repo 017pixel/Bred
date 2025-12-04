@@ -1,0 +1,369 @@
+/* ========================================
+   Component Styles - Buttons, Inputs, Cards
+   ======================================== */
+
+/* Navigation Buttons */
+.nav-button {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 40px;
+    height: 40px;
+    background: var(--bg-secondary);
+    border: 1px solid var(--border-color);
+    border-radius: 50%;
+    cursor: pointer;
+    transition: background-color 0.2s ease, border-color 0.2s ease, transform 0.15s ease;
+}
+
+.nav-button:hover {
+    background-color: var(--bg-tertiary);
+    border-color: var(--text-muted);
+    transform: scale(1.05);
+}
+
+.nav-button .material-symbols-outlined {
+    font-size: 20px;
+    color: var(--text-secondary);
+    transition: color 0.2s ease;
+}
+
+.nav-button:hover .material-symbols-outlined {
+    color: var(--text-primary);
+}
+
+/* New Chat Button */
+.nav-button.new-chat-button {
+    background: linear-gradient(135deg, var(--accent-muted) 0%, var(--bg-secondary) 100%);
+}
+
+.nav-button.new-chat-button .material-symbols-outlined {
+    color: var(--accent-primary);
+    font-weight: 600;
+}
+
+.nav-button.new-chat-button:hover {
+    box-shadow: 0 4px 16px rgba(124, 176, 138, 0.4);
+}
+
+/* Account Button */
+.nav-button.account-button {
+    background: linear-gradient(135deg, var(--accent-muted) 0%, var(--bg-secondary) 100%);
+}
+
+.nav-button.account-button .material-symbols-outlined {
+    color: var(--accent-primary);
+}
+
+/* Banner Button */
+.banner-button {
+    padding: 5px 12px;
+    background-color: var(--accent-primary);
+    color: var(--bg-primary);
+    border: none;
+    border-radius: var(--radius-sm);
+    font-size: 12px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: opacity 0.2s ease;
+}
+
+.banner-button:hover {
+    opacity: 0.85;
+}
+
+/* Suggestion Cards */
+.suggestions-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 16px;
+    width: 100%;
+    max-width: 800px;
+    margin: 0 auto;
+}
+
+.suggestion-card {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 12px;
+    padding: 24px;
+    background-color: var(--bg-secondary);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-md);
+    cursor: pointer;
+    transition: transform 0.2s ease, border-color 0.2s ease, background-color 0.2s ease;
+    text-align: left;
+}
+
+.suggestion-card:hover {
+    transform: translateY(-4px);
+    border-color: var(--accent-muted);
+    background-color: var(--bg-tertiary);
+}
+
+.suggestion-card .material-symbols-outlined {
+    font-size: 28px;
+    color: var(--accent-primary);
+}
+
+.card-text {
+    font-size: 15px;
+    font-weight: 500;
+    color: var(--text-primary);
+}
+
+/* Message Bubbles */
+.message {
+    animation: fadeIn 0.3s ease;
+    line-height: 1.7;
+    font-size: 15px;
+}
+
+.user-message {
+    align-self: flex-end;
+    max-width: 75%;
+    padding: 12px 18px;
+    background-color: var(--accent-muted);
+    border-radius: var(--radius-lg);
+    color: var(--text-primary);
+}
+
+.bot-message {
+    align-self: flex-start;
+    max-width: 85%;
+    color: var(--text-primary);
+}
+
+.bot-message p {
+    margin: 0;
+}
+
+/* Chat Input */
+.chat-input-wrapper {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    background-color: var(--bg-secondary);
+    border-radius: 28px;
+    padding: 8px 8px 8px 22px;
+    border: 1px solid var(--border-color);
+    transition: border-color 0.25s ease, box-shadow 0.25s ease;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+}
+
+.chat-input-wrapper:focus-within {
+    border-color: var(--accent-secondary);
+    box-shadow: 0 4px 24px rgba(0, 0, 0, 0.4), 0 0 0 1px var(--accent-muted);
+}
+
+.chat-input {
+    flex: 1;
+    background: transparent;
+    border: none;
+    outline: none;
+    color: var(--text-primary);
+    font-family: inherit;
+    font-size: 15px;
+    padding: 10px 0;
+    line-height: 1.5;
+}
+
+.chat-input::placeholder {
+    color: var(--text-muted);
+}
+
+/* Send Button */
+.send-button {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 44px;
+    height: 44px;
+    background: linear-gradient(135deg, var(--accent-primary) 0%, var(--accent-secondary) 100%);
+    border: none;
+    border-radius: 50%;
+    cursor: pointer;
+    transition: transform 0.15s ease, box-shadow 0.2s ease;
+    box-shadow: 0 2px 12px rgba(124, 176, 138, 0.35);
+    flex-shrink: 0;
+}
+
+.send-button:hover {
+    transform: scale(1.06);
+    box-shadow: 0 4px 20px rgba(124, 176, 138, 0.5);
+}
+
+.send-button:active {
+    transform: scale(0.94);
+}
+
+.send-button .material-symbols-outlined {
+    font-size: 22px;
+    color: var(--bg-primary);
+    font-weight: 600;
+}
+
+/* Loading Animation */
+.loading-dots {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    padding: 4px 0;
+}
+
+.loading-dots span {
+    width: 6px;
+    height: 6px;
+    background-color: var(--text-secondary);
+    border-radius: 50%;
+    animation: bounce 1.4s infinite ease-in-out both;
+}
+
+.loading-dots span:nth-child(1) {
+    animation-delay: -0.32s;
+}
+
+.loading-dots span:nth-child(2) {
+    animation-delay: -0.16s;
+}
+
+/* Toggle Switch */
+.toggle-switch {
+    position: relative;
+    width: 44px;
+    height: 24px;
+    cursor: pointer;
+}
+
+.toggle-switch input {
+    opacity: 0;
+    width: 0;
+    height: 0;
+}
+
+.toggle-slider {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: var(--bg-tertiary);
+    border: 1px solid var(--border-color);
+    border-radius: 24px;
+    transition: background-color 0.3s ease, border-color 0.3s ease;
+}
+
+.toggle-slider::before {
+    position: absolute;
+    content: "";
+    height: 18px;
+    width: 18px;
+    left: 2px;
+    bottom: 2px;
+    background-color: var(--text-secondary);
+    border-radius: 50%;
+    transition: transform 0.3s ease, background-color 0.3s ease;
+}
+
+.toggle-switch input:checked+.toggle-slider {
+    background-color: var(--accent-muted);
+    border-color: var(--accent-secondary);
+}
+
+.toggle-switch input:checked+.toggle-slider::before {
+    transform: translateX(20px);
+    background-color: var(--accent-primary);
+}
+
+/* Settings Input */
+.settings-input,
+.settings-textarea {
+    background-color: var(--bg-tertiary);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-md);
+    padding: 12px 16px;
+    color: var(--text-primary);
+    font-family: inherit;
+    font-size: 14px;
+    transition: border-color 0.2s ease;
+    outline: none;
+}
+
+.settings-input:focus,
+.settings-textarea:focus {
+    border-color: var(--accent-muted);
+}
+
+.settings-input::placeholder,
+.settings-textarea::placeholder {
+    color: var(--text-muted);
+}
+
+.settings-textarea {
+    min-height: 80px;
+    resize: vertical;
+    line-height: 1.5;
+}
+
+/* Input Wrapper (for API key) */
+.input-wrapper {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    background-color: var(--bg-tertiary);
+    border-radius: var(--radius-md);
+    padding: 4px 4px 4px 14px;
+    border: 1px solid var(--border-color);
+    transition: border-color 0.2s ease;
+}
+
+.input-wrapper:focus-within {
+    border-color: var(--accent-muted);
+}
+
+.input-wrapper input {
+    flex: 1;
+    background: transparent;
+    border: none;
+    outline: none;
+    color: var(--text-primary);
+    font-family: inherit;
+    font-size: 14px;
+    padding: 8px 0;
+}
+
+.input-wrapper input::placeholder {
+    color: var(--text-muted);
+}
+
+.toggle-visibility {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 36px;
+    height: 36px;
+    background: transparent;
+    border: none;
+    cursor: pointer;
+}
+
+.toggle-visibility .material-symbols-outlined {
+    font-size: 18px;
+    color: var(--text-muted);
+}
+
+.hint {
+    margin-top: 10px;
+    font-size: 12px;
+}
+
+.hint a {
+    color: var(--accent-primary);
+    text-decoration: none;
+}
+
+.hint a:hover {
+    text-decoration: underline;
+}
