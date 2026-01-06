@@ -1,0 +1,116 @@
+/* ========================================
+   Responsive Styles
+   ======================================== */
+
+@media (max-width: 768px) {
+    .modal-overlay {
+        align-items: flex-end;
+        padding: 0;
+    }
+
+    .modal {
+        width: 100%;
+        height: auto;
+        max-height: 92vh;
+        border-radius: var(--radius-lg) var(--radius-lg) 0 0;
+        transform: translateY(100%);
+        transition: transform 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+        border-bottom: none;
+    }
+
+    .modal-overlay.active .modal {
+        transform: translateY(0);
+    }
+
+    .modal-content {
+        height: 100%;
+        display: flex;
+        flex-direction: column;
+    }
+
+    .modal-body {
+        flex: 1;
+        overflow-y: auto;
+        padding-bottom: 40px;
+    }
+
+    /* Welcome Screen XXL Full Center on Mobile */
+    .welcome-container {
+        padding: 0 20px;
+        align-items: center;
+        text-align: center;
+        justify-content: center;
+        min-height: calc(100vh - 120px);
+    }
+
+    .user-greeting {
+        font-size: 56px;
+        /* XXL Mobile */
+        line-height: 1;
+    }
+
+    .sub-greeting {
+        font-size: 38px;
+        /* XXL Mobile */
+        line-height: 1.1;
+    }
+
+    .welcome-heading {
+        gap: 12px;
+        margin-bottom: 60px;
+        align-items: center;
+    }
+
+    /* Twin Track Mobile Spacing */
+    .suggestions-container-fixed {
+        gap: 12px;
+    }
+
+    .suggestion-pill {
+        padding: 12px 24px;
+        font-size: 18px;
+    }
+
+    .suggestion-card {
+        flex: 0 1 auto;
+        display: flex;
+        flex-direction: row;
+        /* Horizontal */
+        align-items: center;
+        gap: 6px;
+        padding: 8px 14px;
+        background-color: var(--bg-secondary);
+        border: 1px solid var(--border-color);
+        border-radius: 20px;
+        /* Pill shape */
+        min-width: 0;
+        cursor: pointer;
+    }
+
+    .suggestion-card .material-symbols-outlined {
+        font-size: 16px;
+        color: var(--accent-primary);
+    }
+
+    .card-text {
+        font-size: 12px;
+        font-weight: 500;
+        color: var(--text-primary);
+        white-space: nowrap;
+    }
+
+    .top-nav {
+        padding: 10px 16px;
+    }
+
+    .nav-button {
+        width: 36px;
+        height: 36px;
+    }
+}
+
+@media (max-width: 480px) {
+    .settings-textarea {
+        min-height: 60px;
+    }
+}

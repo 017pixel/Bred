@@ -1,0 +1,307 @@
+<!DOCTYPE html>
+<html lang="de">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport"
+        content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <meta name="theme-color" content="#0a0a0a">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <title>Bred</title>
+
+    <!-- PWA -->
+    <link rel="manifest" href="manifest.json">
+    <link rel="icon" type="image/png" href="icon-192.png">
+    <link rel="apple-touch-icon" href="icon-192.png">
+
+    <!-- Styles -->
+    <link rel="stylesheet" href="css/base.css">
+    <link rel="stylesheet" href="css/layout.css">
+    <link rel="stylesheet" href="css/components.css">
+    <link rel="stylesheet" href="css/modals.css">
+    <link rel="stylesheet" href="css/responsive.css">
+
+    <!-- Material Icons -->
+    <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@24,400,0,0"
+        rel="stylesheet">
+    <!-- Google Font -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+
+    <script>
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('./sw.js')
+                    .then(registration => console.log('SW registered'))
+                    .catch(err => console.log('SW registration failed: ', err));
+            });
+        }
+    </script>
+</head>
+
+<body>
+    <!-- Top Navigation Bar -->
+    <nav class="top-nav">
+        <div class="nav-left">
+            <button class="nav-button new-chat-button" id="newChatButton" title="Neuer Chat">
+                <span class="material-symbols-outlined">add</span>
+            </button>
+        </div>
+        <div class="nav-right">
+            <button class="nav-button" id="historyButton" title="Verlauf">
+                <span class="material-symbols-outlined">history</span>
+            </button>
+            <button class="nav-button" id="settingsButton" title="Einstellungen">
+                <span class="material-symbols-outlined">settings</span>
+            </button>
+            <button class="nav-button account-button" id="accountButton" title="Profil">
+                <span class="material-symbols-outlined">account_circle</span>
+            </button>
+        </div>
+    </nav>
+
+    <!-- API Key Banner (shown when no key) -->
+    <div class="api-banner" id="apiBanner">
+        <span class="material-symbols-outlined">key</span>
+        <span>Bitte Groq API-Key eingeben</span>
+        <button class="banner-button" id="openSettingsBtn">Einrichten</button>
+    </div>
+
+    <!-- Background Orbs -->
+    <div class="background-orbs">
+        <div class="orb orb-1"></div>
+        <div class="orb orb-2"></div>
+        <div class="orb orb-3"></div>
+    </div>
+
+    <!-- Messages Area -->
+    <div class="chat-messages" id="chatMessages">
+        <!-- Welcome Screen -->
+        <div class="welcome-container" id="welcomeScreen">
+            <h1 class="welcome-heading" id="welcomeTitle">
+                <span class="user-greeting">Hallo, Benjamin</span>
+                <span class="sub-greeting">Wie kann ich dir heute helfen?</span>
+            </h1>
+
+            <div class="suggestions-container-fixed">
+                <div class="scrolling-track track-left">
+                    <button class="suggestion-pill" data-prompt="Erkläre mir Quantenphysik">Erkläre mir...</button>
+                    <button class="suggestion-pill" data-prompt="Programmiere eine Website">Programmiere mir...</button>
+                    <button class="suggestion-pill" data-prompt="Schreibe eine Kurzgeschichte">Schreibe mir...</button>
+                    <button class="suggestion-pill" data-prompt="Übersetze diesen Text">Übersetzen...</button>
+                    <button class="suggestion-pill" data-prompt="Erstelle einen Trainingsplan">Trainingsplan...</button>
+                    <button class="suggestion-pill" data-prompt="Physik-Grundlagen">Erkläre mir...</button>
+                    <!-- Perfect Duplicate of the set above -->
+                    <button class="suggestion-pill" data-prompt="Erkläre mir Quantenphysik">Erkläre mir...</button>
+                    <button class="suggestion-pill" data-prompt="Programmiere eine Website">Programmiere mir...</button>
+                    <button class="suggestion-pill" data-prompt="Schreibe eine Kurzgeschichte">Schreibe mir...</button>
+                    <button class="suggestion-pill" data-prompt="Übersetze diesen Text">Übersetzen...</button>
+                    <button class="suggestion-pill" data-prompt="Erstelle einen Trainingsplan">Trainingsplan...</button>
+                    <button class="suggestion-pill" data-prompt="Physik-Grundlagen">Erkläre mir...</button>
+                </div>
+                <div class="scrolling-track track-right">
+                    <button class="suggestion-pill" data-prompt="Rezeptidee für das Abendessen">Rezeptidee...</button>
+                    <button class="suggestion-pill" data-prompt="Fasse diesen Text zusammen">Fasse zusammen...</button>
+                    <button class="suggestion-pill" data-prompt="Ideen für ein Geschenk">Geschenkideen...</button>
+                    <button class="suggestion-pill" data-prompt="Lerne Spanisch Vokabeln">Spanisch lernen...</button>
+                    <button class="suggestion-pill" data-prompt="Plane eine Reise nach Berlin">Reise planen...</button>
+                    <!-- Perfect Duplicate of the set above -->
+                    <button class="suggestion-pill" data-prompt="Rezeptidee für das Abendessen">Rezeptidee...</button>
+                    <button class="suggestion-pill" data-prompt="Fasse diesen Text zusammen">Fasse zusammen...</button>
+                    <button class="suggestion-pill" data-prompt="Ideen für ein Geschenk">Geschenkideen...</button>
+                    <button class="suggestion-pill" data-prompt="Lerne Spanisch Vokabeln">Spanisch lernen...</button>
+                    <button class="suggestion-pill" data-prompt="Plane meine Reise nach Berlin">Reise planen...</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Chat Area (messages appear here) -->
+        <div class="chat-area" id="chatArea"></div>
+    </div>
+
+    <!-- Input Area -->
+    <div class="chat-input-container">
+        <div class="input-row-screenshot">
+            <div class="input-main">
+                <input type="text" id="messageInput" class="premium-input" placeholder="Frage mich irgendwas..."
+                    autocomplete="off">
+            </div>
+            <button class="send-btn-round" id="sendButton">
+                <span class="material-symbols-outlined">arrow_upward</span>
+            </button>
+        </div>
+    </div>
+
+    <!-- Settings Modal -->
+    <div class="modal-overlay" id="settingsModal">
+        <div class="modal settings-modal">
+            <div class="modal-header">
+                <h2>Einstellungen</h2>
+                <button class="modal-close" id="closeModal">
+                    <span class="material-symbols-outlined">close</span>
+                </button>
+            </div>
+            <div class="modal-body">
+                <!-- API Configuration Section -->
+                <div class="settings-section">
+                    <h3 class="section-title">
+                        <span class="material-symbols-outlined">key</span>
+                        API-Konfiguration
+                    </h3>
+
+                    <div class="field-group">
+                        <label for="groqApiKeyInput">Groq API-Key</label>
+                        <div class="input-wrapper">
+                            <input type="password" id="groqApiKeyInput" placeholder="Groq API-Key hier eingeben..."
+                                autocomplete="off">
+                            <button class="toggle-visibility" id="toggleGroqVisibility">
+                                <span class="material-symbols-outlined">visibility</span>
+                            </button>
+                        </div>
+                        <p class="hint">
+                            <a href="https://console.groq.com/keys" target="_blank">Groq API-Key holen</a>
+                        </p>
+                    </div>
+
+                    <div class="field-group">
+                        <label for="modelSelect">
+                            <span class="material-symbols-outlined">neurology</span>
+                            Modell auswählen
+                        </label>
+                        <select id="modelSelect" class="settings-select">
+                            <option value="llama-3.3-70b-versatile">Llama 3.3 70B Versatile</option>
+                            <option value="llama-3.2-11b-vision-preview">Llama 3.2 11B Vision</option>
+                            <option value="llama-3.2-90b-vision-preview">Llama 3.2 90B Vision</option>
+                            <option value="openai/gpt-oss-20b">GPT OSS 20B</option>
+                            <option value="openai/gpt-oss-120b">GPT OSS 120B</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="settings-divider"></div>
+
+                <div class="settings-section">
+                    <div class="section-title">
+                        <span class="material-symbols-outlined">memory</span>
+                        Gedächtnis-Funktion
+                    </div>
+                    <div class="field-group toggle-group">
+                        <div class="toggle-info">
+                            <label for="memoryToggle">
+                                KI-Gedächtnis aktivieren
+                            </label>
+                            <p class="section-hint">Chat-Zusammenfassungen für zukünftige Chats nutzen.</p>
+                        </div>
+                        <label class="toggle-switch">
+                            <input type="checkbox" id="memoryToggle">
+                            <span class="toggle-slider"></span>
+                        </label>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="modal-button secondary" id="cancelButton">Abbrechen</button>
+                <button class="modal-button primary" id="saveSettings">Speichern</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Account Modal -->
+    <div class="modal-overlay" id="accountModal">
+        <div class="modal account-modal">
+            <div class="modal-header">
+                <h2>Mein Profil</h2>
+                <button class="modal-close" id="closeAccountModal">
+                    <span class="material-symbols-outlined">close</span>
+                </button>
+            </div>
+            <div class="modal-body">
+                <!-- Profile Section -->
+                <div class="settings-section">
+                    <div class="section-header">
+                        <h3 class="section-title">
+                            <span class="material-symbols-outlined">person</span>
+                            Personalisierung
+                        </h3>
+                        <div class="incognito-toggle">
+                            <span class="incognito-label" id="incognitoLabel">
+                                <span class="material-symbols-outlined incognito-icon"
+                                    id="incognitoIcon">visibility</span>
+                                <span id="incognitoText">Aktiv</span>
+                            </span>
+                            <label class="toggle-switch">
+                                <input type="checkbox" id="incognitoToggle" checked>
+                                <span class="toggle-slider"></span>
+                            </label>
+                        </div>
+                    </div>
+                    <p class="section-hint">Diese Infos werden Bred mitgeteilt, um personalisierte Antworten zu
+                        geben.</p>
+
+                    <div class="personalization-fields" id="personalizationFields">
+                        <div class="field-group">
+                            <label for="userName">
+                                <span class="material-symbols-outlined">badge</span>
+                                Dein Name
+                            </label>
+                            <input type="text" id="userName" class="settings-input" placeholder="Wie heißt du?">
+                        </div>
+
+                        <div class="field-group">
+                            <label for="userHobbies">
+                                <span class="material-symbols-outlined">interests</span>
+                                Hobbys & Interessen
+                            </label>
+                            <textarea id="userHobbies" class="settings-textarea"
+                                placeholder="Was machst du gerne? (z.B. Gaming, Musik, Sport...)"></textarea>
+                        </div>
+
+                        <div class="field-group">
+                            <label for="userInstructions">
+                                <span class="material-symbols-outlined">rule</span>
+                                Anweisungen an den Chatbot
+                            </label>
+                            <textarea id="userInstructions" class="settings-textarea"
+                                placeholder="Wie soll der Chatbot antworten? (z.B. Duze mich, sei humorvoll, antworte kurz...)"></textarea>
+                        </div>
+
+                        <div class="field-group">
+                            <label for="userAbout">
+                                <span class="material-symbols-outlined">info</span>
+                                Weiteres über dich
+                            </label>
+                            <textarea id="userAbout" class="settings-textarea"
+                                placeholder="Was sollte Bred noch über dich wissen? (z.B. Beruf, Alter, Sprache...)"></textarea>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="modal-button secondary" id="cancelAccountButton">Abbrechen</button>
+                <button class="modal-button primary" id="saveAccountSettings">Speichern</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- History Modal -->
+    <div class="modal-overlay" id="historyModal">
+        <div class="modal history-modal">
+            <div class="modal-header">
+                <h2>Meine Chats</h2>
+                <button class="modal-close" id="closeHistoryModal">
+                    <span class="material-symbols-outlined">close</span>
+                </button>
+            </div>
+            <div class="modal-body">
+                <div class="chat-list" id="chatList">
+                    <!-- Chat items will be inserted here -->
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Scripts -->
+    <script type="module" src="js/main.js"></script>
+</body>
+
+</html>
