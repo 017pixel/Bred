@@ -1,0 +1,228 @@
+@media (max-width: 768px) {
+    .modal-overlay {
+        align-items: flex-end;
+        padding: 0;
+    }
+
+    .modal {
+        width: 100%;
+        height: auto;
+        max-height: 92vh;
+        border-radius: var(--radius-lg) var(--radius-lg) 0 0;
+        transform: translateY(100%);
+        transition: transform 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+        border-bottom: none;
+    }
+
+    .modal-overlay.active .modal {
+        transform: translateY(0);
+    }
+
+    .modal-content {
+        height: 100%;
+        display: flex;
+        flex-direction: column;
+    }
+
+    .modal-body {
+        flex: 1;
+        overflow-y: auto;
+        padding-bottom: 40px;
+    }
+
+    .welcome-container {
+        padding: 0 20px;
+        align-items: center;
+        text-align: center;
+        justify-content: center;
+        height: 100%;
+    }
+
+    .user-greeting {
+        font-size: 56px;
+        line-height: 1;
+    }
+
+    .sub-greeting {
+        font-size: 38px;
+        line-height: 1.1;
+    }
+
+    .welcome-heading {
+        gap: 12px;
+        margin-bottom: 60px;
+        align-items: center;
+    }
+
+    .suggestions-container-fixed {
+        gap: 12px;
+    }
+
+    .suggestion-pill {
+        padding: 12px 24px;
+        font-size: 18px;
+    }
+
+    .suggestions-grid-pc {
+        display: none;
+    }
+
+    .suggestion-card {
+        flex: 0 1 auto;
+        display: flex;
+        flex-direction: row;
+        align-items: center;
+        gap: 6px;
+        padding: 8px 14px;
+        background-color: var(--bg-secondary);
+        border: 1px solid var(--border-color);
+        border-radius: 20px;
+        min-width: 0;
+        cursor: pointer;
+    }
+
+    .suggestion-card .material-symbols-outlined {
+        font-size: 16px;
+        color: var(--accent-primary);
+    }
+
+    .card-text {
+        font-size: 12px;
+        font-weight: 500;
+        color: var(--text-primary);
+        white-space: nowrap;
+    }
+
+    .top-nav {
+        padding: 10px 16px;
+    }
+
+    .nav-button {
+        width: 36px;
+        height: 36px;
+    }
+
+    .input-row-screenshot {
+        flex-wrap: nowrap;
+        gap: 8px;
+    }
+
+    .input-main {
+        flex: 7;
+        min-width: 0;
+    }
+
+    .input-actions-group {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 8px;
+        flex: 3;
+    }
+
+    .input-action-btn,
+    .send-btn-round {
+        width: 48px;
+        height: 48px;
+        flex-shrink: 0;
+    }
+
+    .input-action-btn .material-symbols-outlined,
+    .send-btn-round .material-symbols-outlined {
+        font-size: 20px;
+    }
+}
+
+@media (max-width: 480px) {
+    .settings-textarea {
+        min-height: 60px;
+    }
+}
+
+@media (min-width: 769px) {
+    .user-greeting {
+        font-size: 48px;
+        letter-spacing: -1px;
+    }
+
+    .sub-greeting {
+        font-size: 22px;
+        letter-spacing: -0.5px;
+    }
+
+    .welcome-heading {
+        margin-bottom: 48px;
+        gap: 16px;
+    }
+
+    .suggestions-container-fixed {
+        display: none;
+    }
+
+    .suggestions-grid-pc {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 16px;
+        max-width: 600px;
+        width: 100%;
+    }
+
+    .suggestion-card-pc {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 12px;
+        padding: 24px 16px;
+        background: rgba(255, 255, 255, 0.03);
+        border: 1px solid rgba(255, 255, 255, 0.08);
+        border-radius: 16px;
+        color: var(--text-primary);
+        font-size: 14px;
+        font-weight: 500;
+        cursor: pointer;
+        transition: all 0.25s ease;
+    }
+
+    .suggestion-card-pc:hover {
+        background: rgba(255, 255, 255, 0.06);
+        border-color: var(--accent-secondary);
+        transform: translateY(-4px);
+    }
+
+    .suggestion-card-pc .material-symbols-outlined {
+        font-size: 32px;
+        color: var(--accent-primary);
+    }
+
+    .orb {
+        width: 700px;
+        height: 700px;
+        filter: blur(150px);
+        opacity: 0.08;
+    }
+
+    .orb-1 {
+        top: -200px;
+        left: -200px;
+    }
+
+    .orb-2 {
+        bottom: -100px;
+        right: -200px;
+    }
+
+    .orb-3 {
+        top: 25%;
+        left: 35%;
+        width: 500px;
+        height: 500px;
+    }
+
+    .chat-area {
+        padding: 60px 20px 200px;
+    }
+
+    .welcome-container {
+        height: 100%;
+    }
+}

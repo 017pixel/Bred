@@ -1,0 +1,105 @@
+/* ========================================
+   Base Styles - Variables & Reset
+   ======================================== */
+
+:root {
+    /* Dark Theme Colors */
+    --bg-primary: #0a0a0a;
+    --bg-secondary: #141414;
+    --bg-tertiary: #1a1a1a;
+
+    /* Pastel Green Accent */
+    --accent-primary: #7cb08a;
+    --accent-secondary: #5a8a68;
+    --accent-muted: #2d3d30;
+
+    /* Text Colors */
+    --text-primary: #e8e8e8;
+    --text-secondary: #888888;
+    --text-muted: #555555;
+
+    /* Incognito Colors */
+    --incognito-bg: #1e1a2e;
+    --incognito-accent: #9d8ec9;
+
+    /* Misc */
+    --border-color: #252525;
+    --radius-sm: 8px;
+    --radius-md: 12px;
+    --radius-lg: 32px;
+}
+
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+    font-size: 20px;
+    background: radial-gradient(circle at top, #1a1a1a 0%, #0a0a0a 100%);
+    color: var(--text-primary);
+    height: 100vh;
+    display: flex;
+    flex-direction: column;
+    overscroll-behavior-y: none;
+    -webkit-tap-highlight-color: transparent;
+    overflow: hidden;
+}
+
+/* Animations */
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(8px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+@keyframes bounce {
+
+    0%,
+    80%,
+    100% {
+        transform: scale(0.6);
+        opacity: 0.4;
+    }
+
+    40% {
+        transform: scale(1);
+        opacity: 1;
+    }
+}
+
+/* Scrollbar Styling */
+::-webkit-scrollbar {
+    width: 6px;
+}
+
+::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+    background: transparent;
+    border-radius: 3px;
+}
+
+.chat-messages.has-welcome::-webkit-scrollbar {
+    width: 0;
+}
+
+.chat-messages:not(.has-welcome)::-webkit-scrollbar-thumb {
+    background: linear-gradient(180deg, rgba(124, 176, 138, 0.3) 0%, rgba(124, 176, 138, 0.6) 50%, rgba(124, 176, 138, 0.3) 100%);
+    box-shadow: 0 0 10px rgba(124, 176, 138, 0.4), 0 0 20px rgba(124, 176, 138, 0.2);
+}
+
+.chat-messages:not(.has-welcome)::-webkit-scrollbar-thumb:hover {
+    background: linear-gradient(180deg, rgba(124, 176, 138, 0.5) 0%, rgba(124, 176, 138, 0.8) 50%, rgba(124, 176, 138, 0.5) 100%);
+    box-shadow: 0 0 15px rgba(124, 176, 138, 0.6), 0 0 30px rgba(124, 176, 138, 0.3);
+}
