@@ -99,6 +99,31 @@ function setupEventListeners() {
         });
     });
 
+    document.querySelectorAll('.suggestion-card-mobile').forEach(card => {
+        card.addEventListener('click', () => {
+            const prompt = card.getAttribute('data-prompt');
+            if (messageInput) {
+                messageInput.value = prompt;
+                messageInput.focus();
+                autoResizeTextarea(messageInput);
+            }
+        });
+    });
+
+    const suggestionsScroll = document.getElementById('suggestionsMobile')?.querySelector('.suggestions-mobile-scroll');
+    const dots = document.querySelectorAll('.suggestions-dots .dot');
+    
+    suggestionsScroll?.addEventListener('scroll', () => {
+        const scrollLeft = suggestionsScroll.scrollLeft;
+        const cardWidth = suggestionsScroll.querySelector('.suggestion-card-mobile')?.offsetWidth || 0;
+        const gap = 16;
+        const activeIndex = Math.round(scrollLeft / (cardWidth + gap));
+        
+        dots.forEach((dot, i) => {
+            dot.classList.toggle('active', i === activeIndex);
+        });
+    });
+
     setupSettingsListeners();
     setupAccountListeners();
     setupHistoryListeners();
