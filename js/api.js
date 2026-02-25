@@ -111,7 +111,7 @@ function buildSystemPrompt() {
         return null;
     }
 
-    const parts = ["Du bist BREAD, ein hilfreicher und intelligenter KI-Assistent.\n\n"];
+    const parts = ["Du bist BREAD, ein hilfreicher und intelligenter KI-Assistent. Halte deine Antworten kurz und prägnant, es sei denn, der Benutzer fragt ausdrücklich nach Details.\n\n"];
     
     parts.push("## Antwort-Formatierung\n");
     parts.push("Verwende Markdown für deine Antworten:\n");

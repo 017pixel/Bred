@@ -313,6 +313,7 @@ async function handleSendMessage() {
     if (isFirstMessage) {
         const chatArea = document.getElementById('chatArea');
         chatArea?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        UI.updateWelcomeScreen();
     }
 
     if (!state.apiKey) {
