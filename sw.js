@@ -1,4 +1,4 @@
-const CACHE_NAME = 'bread-ai-v7';
+const CACHE_NAME = 'bread-ai-v10';
 const ASSETS_TO_CACHE = [
     './',
     './index.html',

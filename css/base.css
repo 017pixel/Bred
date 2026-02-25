@@ -82,24 +82,49 @@ body {
 }
 
 ::-webkit-scrollbar-track {
-    background: transparent;
+    background: var(--bg-primary);
 }
 
 ::-webkit-scrollbar-thumb {
-    background: transparent;
+    background: rgba(124, 176, 138, 0.3);
     border-radius: 3px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+    background: rgba(124, 176, 138, 0.5);
+}
+
+html {
+    scrollbar-width: thin;
+    scrollbar-color: rgba(124, 176, 138, 0.3) var(--bg-primary);
 }
 
 .chat-messages.has-welcome::-webkit-scrollbar {
     width: 0;
+    display: none;
+}
+
+.chat-messages.has-welcome {
+    overflow: hidden;
+}
+
+.chat-messages:not(.has-welcome) {
+    overflow-y: auto;
+}
+
+.chat-messages:not(.has-welcome)::-webkit-scrollbar {
+    width: 6px;
+}
+
+.chat-messages:not(.has-welcome)::-webkit-scrollbar-track {
+    background: var(--bg-primary);
 }
 
 .chat-messages:not(.has-welcome)::-webkit-scrollbar-thumb {
-    background: linear-gradient(180deg, rgba(124, 176, 138, 0.3) 0%, rgba(124, 176, 138, 0.6) 50%, rgba(124, 176, 138, 0.3) 100%);
-    box-shadow: 0 0 10px rgba(124, 176, 138, 0.4), 0 0 20px rgba(124, 176, 138, 0.2);
+    background: rgba(124, 176, 138, 0.35);
+    border-radius: 3px;
 }
 
 .chat-messages:not(.has-welcome)::-webkit-scrollbar-thumb:hover {
-    background: linear-gradient(180deg, rgba(124, 176, 138, 0.5) 0%, rgba(124, 176, 138, 0.8) 50%, rgba(124, 176, 138, 0.5) 100%);
-    box-shadow: 0 0 15px rgba(124, 176, 138, 0.6), 0 0 30px rgba(124, 176, 138, 0.3);
+    background: rgba(124, 176, 138, 0.55);
 }

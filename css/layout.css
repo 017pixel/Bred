@@ -163,7 +163,6 @@
     display: flex;
     flex-direction: column;
     gap: 15px;
-    margin-bottom: 70px;
     user-select: none;
 }
 
@@ -181,102 +180,6 @@
     color: #ffffff;
     letter-spacing: -1px;
     line-height: 1.1;
-}
-
-.suggestions-mobile {
-    width: 100%;
-    display: none;
-    flex-direction: column;
-    align-items: center;
-    gap: 20px;
-    padding: 0 20px;
-}
-
-.suggestions-mobile-header {
-    font-size: 18px;
-    color: var(--text-secondary);
-    font-weight: 500;
-}
-
-.suggestions-mobile-scroll {
-    display: flex;
-    gap: 16px;
-    overflow-x: auto;
-    scroll-snap-type: x mandatory;
-    -webkit-overflow-scrolling: touch;
-    padding: 10px 0;
-    width: 100%;
-    scrollbar-width: none;
-    -ms-overflow-style: none;
-}
-
-.suggestions-mobile-scroll::-webkit-scrollbar {
-    display: none;
-}
-
-.suggestion-card-mobile {
-    flex: 0 0 calc(100% - 40px);
-    max-width: 280px;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: 12px;
-    padding: 28px 20px;
-    background: rgba(255, 255, 255, 0.04);
-    border: 1px solid rgba(255, 255, 255, 0.08);
-    border-radius: 20px;
-    cursor: pointer;
-    scroll-snap-align: center;
-    transition: all 0.3s ease;
-}
-
-.suggestion-card-mobile:hover {
-    background: rgba(255, 255, 255, 0.08);
-    border-color: var(--accent-secondary);
-    transform: translateY(-4px);
-}
-
-.suggestion-card-mobile .material-symbols-outlined {
-    font-size: 40px;
-    color: var(--accent-primary);
-}
-
-.suggestion-card-mobile .card-title {
-    font-size: 18px;
-    font-weight: 600;
-    color: var(--text-primary);
-}
-
-.suggestion-card-mobile .card-subtitle {
-    font-size: 13px;
-    color: var(--text-muted);
-}
-
-.suggestions-dots {
-    display: flex;
-    gap: 8px;
-    justify-content: center;
-}
-
-.suggestions-dots .dot {
-    width: 8px;
-    height: 8px;
-    border-radius: 50%;
-    background: var(--border-color);
-    transition: all 0.3s ease;
-}
-
-.suggestions-dots .dot.active {
-    background: var(--accent-primary);
-    box-shadow: 0 0 8px rgba(124, 176, 138, 0.5);
-}
-
-.suggestions-grid-pc {
-    display: none;
-}
-
-.suggestion-card-pc {
-    display: none;
 }
 
 .chat-area {

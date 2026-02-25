@@ -89,6 +89,7 @@ function formatMessage(text) {
     
     formatted = formatted.replace(/`([^`]+)`/g, '<code class="inline-code">$1</code>');
     
+    formatted = formatted.replace(/^#### (.+)$/gm, '<h4>$1</h4>');
     formatted = formatted.replace(/^### (.+)$/gm, '<h3>$1</h3>');
     formatted = formatted.replace(/^## (.+)$/gm, '<h2>$1</h2>');
     formatted = formatted.replace(/^# (.+)$/gm, '<h1>$1</h1>');

@@ -167,7 +167,8 @@
 
 .bot-message h1,
 .bot-message h2,
-.bot-message h3 {
+.bot-message h3,
+.bot-message h4 {
     color: var(--text-primary);
     margin: 16px 0 8px 0;
     font-weight: 600;
@@ -183,6 +184,11 @@
 
 .bot-message h3 {
     font-size: 16px;
+}
+
+.bot-message h4 {
+    font-size: 15px;
+    color: var(--text-secondary);
 }
 
 .bot-message .divider {

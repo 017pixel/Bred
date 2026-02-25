@@ -50,16 +50,7 @@
 
     .welcome-heading {
         gap: 12px;
-        margin-bottom: 40px;
         align-items: center;
-    }
-
-    .suggestions-mobile {
-        display: flex;
-    }
-
-    .suggestions-grid-pc {
-        display: none;
     }
 
     .top-nav {
@@ -120,47 +111,7 @@
     }
 
     .welcome-heading {
-        margin-bottom: 48px;
         gap: 16px;
-    }
-
-    .suggestions-mobile {
-        display: none;
-    }
-
-    .suggestions-grid-pc {
-        display: grid;
-        grid-template-columns: repeat(3, 1fr);
-        gap: 16px;
-        max-width: 600px;
-        width: 100%;
-    }
-
-    .suggestion-card-pc {
-        display: flex;
-        flex-direction: column;
-        align-items: center;
-        gap: 12px;
-        padding: 24px 16px;
-        background: rgba(255, 255, 255, 0.03);
-        border: 1px solid rgba(255, 255, 255, 0.08);
-        border-radius: 16px;
-        color: var(--text-primary);
-        font-size: 14px;
-        font-weight: 500;
-        cursor: pointer;
-        transition: all 0.25s ease;
-    }
-
-    .suggestion-card-pc:hover {
-        background: rgba(255, 255, 255, 0.06);
-        border-color: var(--accent-secondary);
-        transform: translateY(-4px);
-    }
-
-    .suggestion-card-pc .material-symbols-outlined {
-        font-size: 32px;
-        color: var(--accent-primary);
     }
 
     .orb {
