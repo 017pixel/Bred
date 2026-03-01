@@ -74,6 +74,9 @@ function setupEventListeners() {
 
     fileInput?.addEventListener('change', handleFileSelect);
 
+    const webSearchBtn = document.getElementById('webSearchBtn');
+    webSearchBtn?.addEventListener('click', handleWebSearch);
+
     settingsButton?.addEventListener('click', openSettings);
     openSettingsBtn?.addEventListener('click', openSettings);
     skillsButton?.addEventListener('click', openSkills);
@@ -457,6 +460,73 @@ function setupModalClosers() {
             if (skillsModal?.classList.contains('active')) closeSkills();
         }
     });
+}
+
+async function handleWebSearch() {
+    const messageInput = document.getElementById('messageInput');
+    const query = messageInput?.value.trim();
+    
+    if (!query) {
+        showError('Bitte gib einen Suchbegriff ein');
+        return;
+    }
+
+    const webSearchBtn = document.getElementById('webSearchBtn');
+    webSearchBtn.disabled = true;
+    webSearchBtn.innerHTML = '<span class="material-symbols-outlined" style="animation: spin 1s linear infinite;">sync</span>';
+
+    const searchUrl = `https://duckduckgo.com/html/?q=${encodeURIComponent(query)}`;
+    
+    try {
+        const response = await fetch(searchUrl);
+        const html = await response.text();
+        
+        const parser = new DOMParser();
+        const doc = parser.parseFromString(html, 'text/html');
+        
+        const results = [];
+        const resultLinks = doc.querySelectorAll('.result__body, .result__snippet');
+        
+        doc.querySelectorAll('.result').forEach((result, index) => {
+            if (index >= 5) return;
+            
+            const titleEl = result.querySelector('.result__a');
+            const urlEl = result.querySelector('.result__url');
+            const snippetEl = result.querySelector('.result__snippet');
+            
+            if (titleEl) {
+                results.push({
+                    title: titleEl.textContent,
+                    url: urlEl ? urlEl.textContent.trim() : titleEl.href,
+                    snippet: snippetEl ? snippetEl.textContent : ''
+                });
+            }
+        });
+
+        if (results.length === 0) {
+            UI.addMessage(`Keine Ergebnisse für "${query}" gefunden.`, 'bot');
+        } else {
+            let responseText = `🔍 **Suchergebnisse für "${query}"**\n\n`;
+            results.forEach((r, i) => {
+                responseText += `${i + 1}. **${r.title}**\n`;
+                responseText += `   ${r.url}\n`;
+                if (r.snippet) {
+                    responseText += `   ${r.snippet.substring(0, 150)}...\n`;
+                }
+                responseText += '\n';
+            });
+            responseText += 'Du kannst mir jetzt eine Frage zu diesen Ergebnissen stellen.';
+            
+            UI.addMessage(responseText, 'bot');
+        }
+        
+    } catch (error) {
+        showError('Suche fehlgeschlagen: ' + error.message);
+        UI.addMessage('Die Web-Suche ist fehlgeschlagen. Bitte versuche es später erneut.', 'bot');
+    }
+    
+    webSearchBtn.disabled = false;
+    webSearchBtn.innerHTML = '<span class="material-symbols-outlined">search</span>';
 }
 
 async function handleSendMessage() {
