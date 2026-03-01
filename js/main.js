@@ -462,18 +462,49 @@ function setupModalClosers() {
     });
 }
 
-async function handleWebSearch() {
-    const messageInput = document.getElementById('messageInput');
-    const query = messageInput?.value.trim();
-    
-    if (!query) {
-        showError('Bitte gib einen Suchbegriff ein');
-        return;
-    }
+let pendingSearchQuery = null;
+let lastSearchResults = null;
 
-    const webSearchBtn = document.getElementById('webSearchBtn');
-    webSearchBtn.disabled = true;
-    webSearchBtn.innerHTML = '<span class="material-symbols-outlined" style="animation: spin 1s linear infinite;">sync</span>';
+function showResearchButton(query) {
+    const chatArea = document.getElementById('chatArea');
+    const messageDiv = document.createElement('div');
+    messageDiv.className = 'message bot-message research-prompt';
+    messageDiv.innerHTML = `
+        <p>Ich muss dafür recherchieren. Möchtest du, dass ich eine Web-Suche durchführe?</p>
+        <div class="research-buttons">
+            <button class="research-btn" id="doResearchBtn">Recherchieren</button>
+            <button class="research-cancel-btn" id="cancelResearchBtn">Abbrechen</button>
+        </div>
+    `;
+    chatArea.appendChild(messageDiv);
+    
+    document.getElementById('doResearchBtn')?.addEventListener('click', () => {
+        messageDiv.remove();
+        executeWebSearch(query);
+    });
+    
+    document.getElementById('cancelResearchBtn')?.addEventListener('click', () => {
+        messageDiv.remove();
+    });
+    
+    const chatMessages = document.getElementById('chatMessages');
+    chatMessages.scrollTop = chatMessages.scrollHeight;
+}
+
+async function executeWebSearch(query) {
+    const chatArea = document.getElementById('chatArea');
+    const loadingDiv = document.createElement('div');
+    loadingDiv.className = 'message bot-message loading-message';
+    loadingDiv.innerHTML = `
+        <div class="loading-dots">
+            <span></span><span></span><span></span>
+        </div>
+        <span class="loading-text">Recherchiere...</span>
+    `;
+    chatArea.appendChild(loadingDiv);
+    
+    const chatMessages = document.getElementById('chatMessages');
+    chatMessages.scrollTop = chatMessages.scrollHeight;
 
     const searchUrl = `https://duckduckgo.com/html/?q=${encodeURIComponent(query)}`;
     
@@ -485,7 +516,6 @@ async function handleWebSearch() {
         const doc = parser.parseFromString(html, 'text/html');
         
         const results = [];
-        const resultLinks = doc.querySelectorAll('.result__body, .result__snippet');
         
         doc.querySelectorAll('.result').forEach((result, index) => {
             if (index >= 5) return;
@@ -496,37 +526,101 @@ async function handleWebSearch() {
             
             if (titleEl) {
                 results.push({
-                    title: titleEl.textContent,
+                    title: titleEl.textContent.trim(),
                     url: urlEl ? urlEl.textContent.trim() : titleEl.href,
-                    snippet: snippetEl ? snippetEl.textContent : ''
+                    snippet: snippetEl ? snippetEl.textContent.trim() : ''
                 });
             }
         });
 
+        loadingDiv.remove();
+        
         if (results.length === 0) {
-            UI.addMessage(`Keine Ergebnisse für "${query}" gefunden.`, 'bot');
-        } else {
-            let responseText = `🔍 **Suchergebnisse für "${query}"**\n\n`;
-            results.forEach((r, i) => {
-                responseText += `${i + 1}. **${r.title}**\n`;
-                responseText += `   ${r.url}\n`;
-                if (r.snippet) {
-                    responseText += `   ${r.snippet.substring(0, 150)}...\n`;
-                }
-                responseText += '\n';
-            });
-            responseText += 'Du kannst mir jetzt eine Frage zu diesen Ergebnissen stellen.';
-            
-            UI.addMessage(responseText, 'bot');
+            UI.addMessage('Keine Ergebnisse gefunden.', 'bot');
+            return;
+        }
+
+        lastSearchResults = {
+            query: query,
+            results: results,
+            timestamp: new Date().toISOString()
+        };
+
+        const jsonText = JSON.stringify(lastSearchResults, null, 2);
+        
+        const resultMessage = document.createElement('div');
+        resultMessage.className = 'message bot-message search-results-message';
+        resultMessage.innerHTML = `
+            <p>Suchergebnisse fuer "${query}":</p>
+            <pre class="search-results-json">${escapeHtml(jsonText)}</pre>
+            <p class="search-results-hint">Ich habe die Ergebnisse. Ich antworte dir jetzt mit den Informationen.</p>
+        `;
+        chatArea.appendChild(resultMessage);
+        
+        chatMessages.scrollTop = chatMessages.scrollHeight;
+
+        const followUpQuestion = `Basierend auf diesen Suchergebnissen: ${jsonText}\n\nBitte beantworte die ursprüngliche Frage des Benutzers.`;
+        
+        const loadingMessage = UI.addLoadingMessage();
+        
+        try {
+            const aiResponse = await sendToAI(followUpQuestion);
+            loadingMessage.remove();
+            resultMessage.remove();
+            UI.addMessage(aiResponse, 'bot');
+            await state.saveCurrentChat();
+        } catch (error) {
+            loadingMessage.remove();
+            UI.addMessage('Fehler bei der Antwort: ' + error.message, 'bot');
         }
         
     } catch (error) {
+        loadingDiv.remove();
         showError('Suche fehlgeschlagen: ' + error.message);
         UI.addMessage('Die Web-Suche ist fehlgeschlagen. Bitte versuche es später erneut.', 'bot');
     }
+}
+
+async function handleWebSearch() {
+    const messageInput = document.getElementById('messageInput');
+    const query = messageInput?.value.trim();
     
-    webSearchBtn.disabled = false;
-    webSearchBtn.innerHTML = '<span class="material-symbols-outlined">search</span>';
+    if (!query) {
+        showError('Bitte gib einen Suchbegriff ein');
+        return;
+    }
+
+    if (!state.apiKey) {
+        UI.addMessage('Bitte gib zuerst einen API-Key ein.', 'bot');
+        openSettings();
+        return;
+    }
+
+    await state.createNewChat();
+    
+    UI.addMessage(query, 'user');
+    messageInput.value = '';
+    autoResizeTextarea(messageInput);
+
+    const loadingMessage = UI.addLoadingMessage();
+    const provider = PROVIDERS[state.activeProvider];
+
+    try {
+        const response = await sendToAI(query + '\n\nWenn du Informationen aus dem Internet benötigst, antworte mit: [RESEARCH_NEEDED] und nichts anderes.');
+        loadingMessage.remove();
+        
+        if (response.includes('[RESEARCH_NEEDED]')) {
+            UI.addMessage(response, 'bot');
+            showResearchButton(query);
+        } else {
+            UI.addMessage(response, 'bot');
+            await state.saveCurrentChat();
+        }
+    } catch (error) {
+        loadingMessage.remove();
+        UI.addMessage(`Fehler: ${error.message}`, 'bot');
+        showApiError(error, provider?.name || 'Provider');
+    }
 }
 
 async function handleSendMessage() {
