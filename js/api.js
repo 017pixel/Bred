@@ -139,6 +139,11 @@ function buildSystemPrompt() {
         parts.push(`Hintergrundwissen aus vergangenen Chats:\n${state.memory}`);
     }
 
+    const skillsPrompt = state.getSkillsPrompt();
+    if (skillsPrompt) {
+        parts.push(skillsPrompt);
+    }
+
     return parts.join('\n');
 }
 

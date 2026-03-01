@@ -29,6 +29,7 @@ class StateManager {
         this.isIncognito = false;
         this.isMemoryEnabled = false;
         this.memory = '';
+        this.skills = {};
         this.isInitialized = false;
     }
 
@@ -52,7 +53,30 @@ class StateManager {
             this.conversationHistory = this.allChats[this.currentChatId].history || [];
         }
 
+        this.skills = await db.getAllSkills();
+        await this.loadBuiltInSkills();
+
         this.isInitialized = true;
+    }
+
+    async loadBuiltInSkills() {
+        const builtInSkills = [
+            {
+                id: 'web-search',
+                name: 'Web Suche',
+                description: 'Im Internet nach aktuellen Informationen suchen mit DuckDuckGo',
+                triggers: ['suche', 'im internet', 'aktuell', 'web search', 'online', 'recherchiere', 'was ist', 'wer ist', 'wie'],
+                prompt: 'VERWENDE DIESE METHODE FÜR WEB-SUCHEN:\n\nUm eine Web-Suche durchzuführen, scrape die HTML-Version von DuckDuckGo:\nURL: https://duckduckgo.com/html/?q={search_terms}\n\nErsetze {search_terms} mit deiner URL-kodierten Suchanfrage.\nBeispiel: Suche nach "Python Tutorials" → https://duckduckgo.com/html/?q=Python+Tutorials\n\nAnalysiere die Ergebnisse und präsentiere dem Benutzer die wichtigsten Informationen mit Quellenangaben.',
+                builtIn: true
+            }
+        ];
+
+        for (const skill of builtInSkills) {
+            if (!this.skills[skill.id]) {
+                await db.saveSkill(skill);
+                this.skills[skill.id] = skill;
+            }
+        }
     }
 
     async migrateFromLocalStorage() {
@@ -219,6 +243,60 @@ class StateManager {
         this.conversationHistory = chat.history || [];
         await db.setSetting(CONFIG.STORAGE_KEYS.CURRENT_CHAT, chatId);
         return true;
+    }
+
+    generateSkillId() {
+        return 'skill_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
+    }
+
+    async saveSkill(skillData) {
+        const skill = {
+            id: skillData.id || this.generateSkillId(),
+            name: skillData.name,
+            description: skillData.description,
+            triggers: skillData.triggers || [],
+            prompt: skillData.prompt || '',
+            builtIn: false,
+            createdAt: skillData.createdAt || Date.now()
+        };
+        await db.saveSkill(skill);
+        this.skills[skill.id] = skill;
+        return skill;
+    }
+
+    async deleteSkill(skillId) {
+        const skill = this.skills[skillId];
+        if (skill?.builtIn) return false;
+        
+        delete this.skills[skillId];
+        await db.deleteSkill(skillId);
+        return true;
+    }
+
+    getActiveSkills() {
+        return Object.values(this.skills);
+    }
+
+    getSkillsPrompt() {
+        const activeSkills = this.getActiveSkills();
+        if (activeSkills.length === 0) return '';
+        
+        let prompt = '\n\n## Verfügbare Skills\n';
+        
+        for (const skill of activeSkills) {
+            prompt += `\n### ${skill.name}\n`;
+            prompt += `${skill.description}\n`;
+            if (skill.triggers && skill.triggers.length > 0) {
+                prompt += `Trigger: ${skill.triggers.join(', ')}\n`;
+            }
+            if (skill.prompt) {
+                prompt += `${skill.prompt}\n`;
+            }
+        }
+        
+        prompt += '\nNutze diese Skills wenn der Benutzer danach fragt oder die Trigger-Wörter verwendet.';
+        
+        return prompt;
     }
 }
 

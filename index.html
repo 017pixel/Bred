@@ -51,6 +51,9 @@
             <button class="nav-button" id="settingsButton" title="Einstellungen">
                 <span class="material-symbols-outlined">settings</span>
             </button>
+            <button class="nav-button" id="skillsButton" title="Skills">
+                <span class="material-symbols-outlined">auto_awesome</span>
+            </button>
             <button class="nav-button account-button" id="accountButton" title="Profil">
                 <span class="material-symbols-outlined">account_circle</span>
             </button>
@@ -268,6 +271,60 @@
             <div class="modal-body">
                 <div class="chat-list" id="chatList">
                 </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal-overlay" id="skillsModal">
+        <div class="modal skills-modal">
+            <div class="modal-header">
+                <h2>Skills</h2>
+                <button class="modal-close" id="closeSkillsModal">
+                    <span class="material-symbols-outlined">close</span>
+                </button>
+            </div>
+            <div class="modal-body">
+                <div class="skills-intro">
+                    <p>Skills erweitern die Fähigkeiten deines Chatbots. Du kannst eigene Skills erstellen oder integrierte Skills nutzen.</p>
+                </div>
+                <div class="skills-list" id="skillsList">
+                </div>
+                <div class="skill-editor" id="skillEditor" style="display: none;">
+                    <div class="skill-editor-header">
+                        <h3 id="skillEditorTitle">Neuer Skill</h3>
+                        <button class="skill-editor-close" id="closeSkillEditor">
+                            <span class="material-symbols-outlined">close</span>
+                        </button>
+                    </div>
+                    <div class="skill-editor-body">
+                        <div class="field-group">
+                            <label for="skillName">Skill Name</label>
+                            <input type="text" id="skillName" class="settings-input" placeholder="z.B. Web Suche, Programmierung...">
+                        </div>
+                        <div class="field-group">
+                            <label for="skillDescription">Beschreibung</label>
+                            <textarea id="skillDescription" class="settings-textarea" placeholder="Was macht dieser Skill?"></textarea>
+                        </div>
+                        <div class="field-group">
+                            <label for="skillTrigger">Trigger-Wörter</label>
+                            <input type="text" id="skillTrigger" class="settings-input" placeholder="z.B. suche, im internet, aktuell (kommagetrennt)">
+                        </div>
+                        <div class="field-group">
+                            <label for="skillPrompt">System-Prompt Erweiterung</label>
+                            <textarea id="skillPrompt" class="settings-textarea" placeholder="Füge Anweisungen hinzu, die bei Aktivierung des Skills verwendet werden sollen..."></textarea>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button class="modal-button secondary" id="cancelSkillEdit">Abbrechen</button>
+                        <button class="modal-button primary" id="saveSkill">Speichern</button>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="modal-button secondary" id="addSkillBtn">
+                    <span class="material-symbols-outlined">add</span>
+                    Neuer Skill
+                </button>
             </div>
         </div>
     </div>

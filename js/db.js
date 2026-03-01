@@ -6,6 +6,7 @@ const DB_NAME = 'GroqChatbotDB';
 const DB_VERSION = 1;
 const STORE_CHATS = 'chats';
 const STORE_SETTINGS = 'settings';
+const STORE_SKILLS = 'skills';
 
 class Database {
     constructor() {
@@ -25,6 +26,9 @@ class Database {
                 }
                 if (!db.objectStoreNames.contains(STORE_SETTINGS)) {
                     db.createObjectStore(STORE_SETTINGS);
+                }
+                if (!db.objectStoreNames.contains(STORE_SKILLS)) {
+                    db.createObjectStore(STORE_SKILLS, { keyPath: 'id' });
                 }
             };
 
@@ -95,6 +99,45 @@ class Database {
             const transaction = this.db.transaction([STORE_CHATS], 'readwrite');
             const store = transaction.objectStore(STORE_CHATS);
             const request = store.delete(chatId);
+            request.onsuccess = () => resolve();
+            request.onerror = () => reject(request.error);
+        });
+    }
+
+    async getAllSkills() {
+        await this.init();
+        return new Promise((resolve, reject) => {
+            const transaction = this.db.transaction([STORE_SKILLS], 'readonly');
+            const store = transaction.objectStore(STORE_SKILLS);
+            const request = store.getAll();
+            request.onsuccess = () => {
+                const skills = {};
+                request.result.forEach(skill => {
+                    skills[skill.id] = skill;
+                });
+                resolve(skills);
+            };
+            request.onerror = () => reject(request.error);
+        });
+    }
+
+    async saveSkill(skill) {
+        await this.init();
+        return new Promise((resolve, reject) => {
+            const transaction = this.db.transaction([STORE_SKILLS], 'readwrite');
+            const store = transaction.objectStore(STORE_SKILLS);
+            const request = store.put(skill);
+            request.onsuccess = () => resolve();
+            request.onerror = () => reject(request.error);
+        });
+    }
+
+    async deleteSkill(skillId) {
+        await this.init();
+        return new Promise((resolve, reject) => {
+            const transaction = this.db.transaction([STORE_SKILLS], 'readwrite');
+            const store = transaction.objectStore(STORE_SKILLS);
+            const request = store.delete(skillId);
             request.onsuccess = () => resolve();
             request.onerror = () => reject(request.error);
         });

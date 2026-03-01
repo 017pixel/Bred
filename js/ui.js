@@ -182,11 +182,12 @@ export function updateWelcomeScreen() {
     
     if (!welcomeScreen || !welcomeTitle) return;
     
-    const isNewChat = state.conversationHistory.length === 0;
+    const isNewChat = !state.conversationHistory || state.conversationHistory.length === 0;
     welcomeScreen.classList.toggle('hidden', !isNewChat);
     
     if (chatMessages) {
         chatMessages.classList.toggle('has-welcome', isNewChat);
+        chatMessages.classList.toggle('no-scroll', isNewChat);
     }
 
     if (isNewChat) {

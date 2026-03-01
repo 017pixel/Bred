@@ -33,6 +33,7 @@ async function init() {
     UI.updateIncognitoUI();
     UI.updateWelcomeScreen();
     UI.updateProviderUI();
+    ensureScrollState();
     
     const messageInput = document.getElementById('messageInput');
     messageInput?.focus();
@@ -44,6 +45,7 @@ function setupEventListeners() {
     const newChatButton = document.getElementById('newChatButton');
     const historyButton = document.getElementById('historyButton');
     const settingsButton = document.getElementById('settingsButton');
+    const skillsButton = document.getElementById('skillsButton');
     const accountButton = document.getElementById('accountButton');
     const openSettingsBtn = document.getElementById('openSettingsBtn');
     const attachFileBtn = document.getElementById('attachFileBtn');
@@ -74,18 +76,35 @@ function setupEventListeners() {
 
     settingsButton?.addEventListener('click', openSettings);
     openSettingsBtn?.addEventListener('click', openSettings);
+    skillsButton?.addEventListener('click', openSkills);
     accountButton?.addEventListener('click', openAccount);
     historyButton?.addEventListener('click', openHistory);
 
     setupSettingsListeners();
     setupAccountListeners();
     setupHistoryListeners();
+    setupSkillsListeners();
     setupModalClosers();
 }
 
 function autoResizeTextarea(textarea) {
     textarea.style.height = 'auto';
     textarea.style.height = Math.min(textarea.scrollHeight, 200) + 'px';
+}
+
+function ensureScrollState() {
+    const chatMessages = document.getElementById('chatMessages');
+    if (!chatMessages) return;
+    
+    const hasMessages = state.conversationHistory && state.conversationHistory.length > 0;
+    chatMessages.classList.toggle('has-welcome', !hasMessages);
+    chatMessages.classList.toggle('no-scroll', !hasMessages);
+    
+    if (hasMessages) {
+        chatMessages.style.overflowY = 'auto';
+    } else {
+        chatMessages.style.overflowY = 'hidden';
+    }
 }
 
 function handleFileSelect(e) {
@@ -261,10 +280,160 @@ function setupHistoryListeners() {
     closeHistoryModal?.addEventListener('click', closeHistory);
 }
 
+let editingSkillId = null;
+
+function setupSkillsListeners() {
+    const closeSkillsModal = document.getElementById('closeSkillsModal');
+    const addSkillBtn = document.getElementById('addSkillBtn');
+    const closeSkillEditor = document.getElementById('closeSkillEditor');
+    const cancelSkillEdit = document.getElementById('cancelSkillEdit');
+    const saveSkill = document.getElementById('saveSkill');
+
+    closeSkillsModal?.addEventListener('click', closeSkills);
+    addSkillBtn?.addEventListener('click', () => openSkillEditor());
+    closeSkillEditor?.addEventListener('click', closeSkillEditorModal);
+    cancelSkillEdit?.addEventListener('click', closeSkillEditorModal);
+    saveSkill?.addEventListener('click', saveSkillData);
+}
+
+function updateSkillsList() {
+    const skillsList = document.getElementById('skillsList');
+    if (!skillsList) return;
+
+    const skills = state.getActiveSkills();
+
+    if (skills.length === 0) {
+        skillsList.innerHTML = `
+            <div class="skills-empty">
+                <span class="material-symbols-outlined">auto_awesome</span>
+                <p>Noch keine Skills vorhanden</p>
+            </div>
+        `;
+        return;
+    }
+
+    skillsList.innerHTML = skills.map(skill => `
+        <div class="skill-item" data-skill-id="${skill.id}">
+            <div class="skill-item-icon ${skill.builtIn ? 'built-in' : ''}">
+                <span class="material-symbols-outlined">${skill.builtIn ? 'enhanced_encryption' : 'psychology'}</span>
+            </div>
+            <div class="skill-item-content">
+                <div class="skill-item-name">${escapeHtml(skill.name)}</div>
+                <div class="skill-item-description">${escapeHtml(skill.description || 'Keine Beschreibung')}</div>
+            </div>
+            ${skill.builtIn ? '<span class="skill-item-badge">Integriert</span>' : `
+            <div class="skill-item-actions">
+                <button class="edit-skill" title="Bearbeiten">
+                    <span class="material-symbols-outlined">edit</span>
+                </button>
+                <button class="delete-skill" title="Löschen">
+                    <span class="material-symbols-outlined">delete</span>
+                </button>
+            </div>`}
+        </div>
+    `).join('');
+
+    skillsList.querySelectorAll('.skill-item').forEach(item => {
+        const skillId = item.getAttribute('data-skill-id');
+        const skill = skills.find(s => s.id === skillId);
+        
+        if (skill && !skill.builtIn) {
+            item.querySelector('.edit-skill')?.addEventListener('click', (e) => {
+                e.stopPropagation();
+                openSkillEditor(skill);
+            });
+            
+            item.querySelector('.delete-skill')?.addEventListener('click', (e) => {
+                e.stopPropagation();
+                deleteSkill(skillId);
+            });
+        }
+    });
+}
+
+function escapeHtml(text) {
+    const div = document.createElement('div');
+    div.textContent = text || '';
+    return div.innerHTML;
+}
+
+function openSkillEditor(skill = null) {
+    editingSkillId = skill?.id || null;
+    const editor = document.getElementById('skillEditor');
+    const title = document.getElementById('skillEditorTitle');
+    const nameInput = document.getElementById('skillName');
+    const descInput = document.getElementById('skillDescription');
+    const triggerInput = document.getElementById('skillTrigger');
+    const promptInput = document.getElementById('skillPrompt');
+
+    if (title) title.textContent = skill ? 'Skill bearbeiten' : 'Neuer Skill';
+    if (nameInput) nameInput.value = skill?.name || '';
+    if (descInput) descInput.value = skill?.description || '';
+    if (triggerInput) triggerInput.value = skill?.triggers?.join(', ') || '';
+    if (promptInput) promptInput.value = skill?.prompt || '';
+
+    if (editor) editor.style.display = 'block';
+}
+
+function closeSkillEditorModal() {
+    const editor = document.getElementById('skillEditor');
+    if (editor) editor.style.display = 'none';
+    editingSkillId = null;
+}
+
+async function saveSkillData() {
+    const nameInput = document.getElementById('skillName');
+    const descInput = document.getElementById('skillDescription');
+    const triggerInput = document.getElementById('skillTrigger');
+    const promptInput = document.getElementById('skillPrompt');
+
+    const name = nameInput?.value.trim();
+    if (!name) {
+        showError('Bitte gib einen Skill-Namen ein');
+        return;
+    }
+
+    const triggers = triggerInput?.value.split(',').map(t => t.trim()).filter(t => t) || [];
+
+    await state.saveSkill({
+        id: editingSkillId,
+        name,
+        description: descInput?.value.trim() || '',
+        triggers,
+        prompt: promptInput?.value.trim() || ''
+    });
+
+    closeSkillEditorModal();
+    updateSkillsList();
+    showSuccess('Skill gespeichert');
+}
+
+async function deleteSkill(skillId) {
+    const success = await state.deleteSkill(skillId);
+    if (success) {
+        updateSkillsList();
+        showSuccess('Skill gelöscht');
+    } else {
+        showError('Integrierte Skills können nicht gelöscht werden');
+    }
+}
+
+function openSkills() {
+    updateSkillsList();
+    const skillsModal = document.getElementById('skillsModal');
+    if (skillsModal) skillsModal.classList.add('active');
+}
+
+function closeSkills() {
+    const skillsModal = document.getElementById('skillsModal');
+    skillsModal?.classList.remove('active');
+}
+
 function setupModalClosers() {
     const settingsModal = document.getElementById('settingsModal');
     const accountModal = document.getElementById('accountModal');
     const historyModal = document.getElementById('historyModal');
+    const skillsModal = document.getElementById('skillsModal');
 
     settingsModal?.addEventListener('click', (e) => {
         if (e.target === settingsModal) closeSettings();
@@ -275,6 +444,9 @@ function setupModalClosers() {
     historyModal?.addEventListener('click', (e) => {
         if (e.target === historyModal) closeHistory();
     });
+    skillsModal?.addEventListener('click', (e) => {
+        if (e.target === skillsModal) closeSkills();
+    });
 
     document.addEventListener('keydown', (e) => {
         if (e.key === 'Escape') {
@@ -282,6 +454,7 @@ function setupModalClosers() {
             if (settingsModal?.classList.contains('active')) closeSettings();
             if (accountModal?.classList.contains('active')) closeAccount();
             if (historyModal?.classList.contains('active')) closeHistory();
+            if (skillsModal?.classList.contains('active')) closeSkills();
         }
     });
 }
@@ -314,6 +487,7 @@ async function handleSendMessage() {
         const chatArea = document.getElementById('chatArea');
         chatArea?.scrollIntoView({ behavior: 'smooth', block: 'start' });
         UI.updateWelcomeScreen();
+        ensureScrollState();
     }
 
     if (!state.apiKey) {
@@ -342,6 +516,7 @@ async function handleNewChat() {
     await state.createNewChat();
     UI.clearChatArea();
     UI.updateWelcomeScreen();
+    ensureScrollState();
     const messageInput = document.getElementById('messageInput');
     messageInput?.focus();
 }
@@ -434,6 +609,7 @@ async function loadChat(chatId) {
         }
 
         closeHistory();
+        ensureScrollState();
     }
 }
 
