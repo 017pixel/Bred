@@ -457,6 +457,10 @@
     color: var(--text-secondary);
     transition: all 0.2s ease;
     flex-shrink: 0;
+    touch-action: manipulation;
+    -webkit-tap-highlight-color: transparent;
+    user-select: none;
+    -webkit-user-select: none;
 }
 
 .input-action-btn:hover {
@@ -468,6 +472,11 @@
 
 .input-action-btn:active {
     transform: scale(0.95);
+}
+
+.input-action-btn:focus {
+    outline: none;
+    box-shadow: 0 0 0 2px var(--accent-muted);
 }
 
 .input-action-btn .material-symbols-outlined {

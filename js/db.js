@@ -3,7 +3,7 @@
  */
 
 const DB_NAME = 'GroqChatbotDB';
-const DB_VERSION = 2;
+const DB_VERSION = 1;
 const STORE_CHATS = 'chats';
 const STORE_SETTINGS = 'settings';
 const STORE_SKILLS = 'skills';

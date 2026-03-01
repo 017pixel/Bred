@@ -68,9 +68,16 @@ function setupEventListeners() {
         });
     }
 
-    attachFileBtn?.addEventListener('click', () => {
+    attachFileBtn?.addEventListener('click', (e) => {
+        e.preventDefault();
+        e.stopPropagation();
         fileInput?.click();
     });
+    
+    attachFileBtn?.addEventListener('touchstart', (e) => {
+        e.preventDefault();
+        fileInput?.click();
+    }, { passive: false });
 
     fileInput?.addEventListener('change', handleFileSelect);
 

@@ -87,11 +87,10 @@ class StateManager {
             }
         ];
 
+        // Always reload built-in skills to ensure they're up-to-date
         for (const skill of builtInSkills) {
-            if (!this.skills[skill.id]) {
-                await db.saveSkill(skill);
-                this.skills[skill.id] = skill;
-            }
+            await db.saveSkill(skill);
+            this.skills[skill.id] = skill;
         }
     }
 
