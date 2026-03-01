@@ -1,0 +1,385 @@
+@media (max-width: 768px) {
+    .modal-overlay {
+        align-items: flex-end;
+        padding: 0;
+    }
+
+    .modal {
+        width: 100%;
+        height: auto;
+        max-height: 92vh;
+        border-radius: var(--radius-lg) var(--radius-lg) 0 0;
+        transform: translateY(100%);
+        transition: transform 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+        border-bottom: none;
+    }
+
+    .modal-overlay.active .modal {
+        transform: translateY(0);
+    }
+
+    .modal-content {
+        height: 100%;
+        display: flex;
+        flex-direction: column;
+    }
+
+    .modal-body {
+        flex: 1;
+        overflow-y: auto;
+        padding-bottom: 40px;
+    }
+
+    .welcome-container {
+        padding: 0 20px;
+        align-items: center;
+        text-align: center;
+        justify-content: center;
+        height: 100%;
+    }
+
+    .user-greeting {
+        font-size: 42px;
+        line-height: 1;
+    }
+
+    .sub-greeting {
+        font-size: 28px;
+        line-height: 1.1;
+    }
+
+    .welcome-heading {
+        gap: 12px;
+        align-items: center;
+    }
+
+    .top-nav {
+        padding: 10px 16px;
+    }
+
+    .nav-button {
+        width: 36px;
+        height: 36px;
+    }
+
+    .input-row-screenshot {
+        flex-wrap: nowrap;
+        gap: 8px;
+    }
+
+    .input-main {
+        flex: 7;
+        min-width: 0;
+    }
+
+    .input-actions-group {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 8px;
+        flex: 3;
+    }
+
+    .input-action-btn,
+    .send-btn-round {
+        width: 48px;
+        height: 48px;
+        flex-shrink: 0;
+    }
+
+    .input-action-btn .material-symbols-outlined,
+    .send-btn-round .material-symbols-outlined {
+        font-size: 20px;
+    }
+
+    .chat-input-wrapper {
+        padding: 6px 6px 6px 14px;
+    }
+
+    .chat-input {
+        font-size: 14px;
+        padding: 8px 0;
+    }
+
+    .message {
+        font-size: 14px;
+    }
+
+    .user-message {
+        max-width: 85%;
+        padding: 10px 14px;
+    }
+
+    .bot-message {
+        max-width: 90%;
+    }
+
+    /* Compact slash command dropdown mobile */
+    .slash-command-dropdown {
+        max-height: 160px;
+        border-radius: var(--radius-sm);
+        margin-bottom: 4px;
+        left: 4px;
+        right: 4px;
+        transform: none;
+        width: auto;
+        max-width: none;
+        padding: 2px;
+    }
+
+    .slash-command-dropdown.visible {
+        animation: slideUpMobile 0.2s ease;
+    }
+
+    @keyframes slideUpMobile {
+        from {
+            opacity: 0;
+            transform: translateY(8px);
+        }
+        to {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    }
+
+    .slash-command-item {
+        padding: 5px 6px;
+        gap: 6px;
+        min-height: 32px;
+    }
+
+    .slash-command-icon {
+        width: 20px;
+        height: 20px;
+        flex-shrink: 0;
+    }
+
+    .slash-command-icon .material-symbols-outlined {
+        font-size: 11px;
+    }
+
+    .slash-command-info {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 1px;
+    }
+
+    .slash-command-name {
+        font-size: 11px;
+        font-weight: 600;
+    }
+
+    .slash-command-desc {
+        font-size: 9px;
+        max-width: 120px;
+    }
+
+    .slash-command-badge {
+        font-size: 7px;
+        padding: 1px 4px;
+    }
+
+    /* Skill usage badge mobile */
+    .skill-usage-badge {
+        padding: 5px 10px;
+        font-size: 11px;
+    }
+
+    .skill-usage-badge .material-symbols-outlined {
+        font-size: 12px;
+    }
+
+    /* Code blocks mobile */
+    .code-block-wrapper {
+        margin: 8px 0;
+    }
+
+    .code-block pre {
+        font-size: 12px;
+        padding: 10px;
+        max-height: 200px;
+        overflow-x: auto;
+    }
+
+    .code-header {
+        padding: 4px 8px;
+        font-size: 10px;
+    }
+
+    /* Tables mobile */
+    .table-wrapper {
+        overflow-x: auto;
+    }
+
+    .message-table {
+        font-size: 11px;
+    }
+
+    .message-table th,
+    .message-table td {
+        padding: 6px 8px;
+    }
+
+    /* Settings mobile */
+    .settings-section {
+        padding: 12px 0;
+    }
+
+    .section-title {
+        font-size: 14px;
+    }
+
+    .settings-input,
+    .settings-textarea {
+        font-size: 13px;
+        padding: 10px 12px;
+    }
+
+    .settings-select-button {
+        padding: 10px 12px;
+        font-size: 13px;
+    }
+
+    .field-group {
+        margin-bottom: 14px;
+    }
+
+    .field-group label {
+        font-size: 12px;
+        margin-bottom: 6px;
+    }
+
+    /* Chat list mobile */
+    .chat-item {
+        padding: 10px 12px;
+        gap: 8px;
+    }
+
+    .chat-item-title {
+        font-size: 13px;
+    }
+
+    .chat-item-preview {
+        font-size: 11px;
+    }
+
+    .chat-item-date {
+        font-size: 10px;
+    }
+
+    /* Skills list mobile */
+    .skill-item {
+        padding: 10px 12px;
+    }
+
+    .skill-item-name {
+        font-size: 13px;
+    }
+
+    .skill-item-description {
+        font-size: 11px;
+    }
+
+    .skill-item-icon {
+        width: 28px;
+        height: 28px;
+    }
+
+    /* Bottom sheet mobile */
+    .bottom-sheet {
+        max-height: 70vh;
+        border-radius: var(--radius-lg) var(--radius-lg) 0 0;
+    }
+
+    /* Banner mobile */
+    .api-banner {
+        padding: 8px 12px;
+        font-size: 12px;
+    }
+
+    .banner-button {
+        padding: 4px 10px;
+        font-size: 11px;
+    }
+
+    /* Suggestions grid mobile */
+    .suggestions-grid {
+        grid-template-columns: 1fr;
+        gap: 12px;
+    }
+
+    .suggestion-card {
+        padding: 16px;
+    }
+
+    .card-text {
+        font-size: 13px;
+    }
+
+    /* Attached files mobile */
+    .attached-file {
+        padding: 6px 10px;
+        font-size: 12px;
+    }
+
+    .attached-file-name {
+        max-width: 120px;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
+}
+
+@media (max-width: 480px) {
+    .settings-textarea {
+        min-height: 60px;
+    }
+}
+
+@media (min-width: 769px) {
+    .user-greeting {
+        font-size: 48px;
+        letter-spacing: -1px;
+    }
+
+    .sub-greeting {
+        font-size: 22px;
+        letter-spacing: -0.5px;
+    }
+
+    .welcome-heading {
+        gap: 16px;
+    }
+
+    .orb {
+        width: 700px;
+        height: 700px;
+        filter: blur(150px);
+        opacity: 0.08;
+    }
+
+    .orb-1 {
+        top: -200px;
+        left: -200px;
+    }
+
+    .orb-2 {
+        bottom: -100px;
+        right: -200px;
+    }
+
+    .orb-3 {
+        top: 25%;
+        left: 35%;
+        width: 500px;
+        height: 500px;
+    }
+
+    .chat-area {
+        padding: 60px 20px 200px;
+    }
+
+    .welcome-container {
+        height: 100%;
+    }
+}
