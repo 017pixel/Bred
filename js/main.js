@@ -1,7 +1,7 @@
 import { state } from './state.js';
 import { sendToAI, generateSummary } from './api.js';
 import * as UI from './ui.js';
-import { showProviderSelect, showModelSelect, closeBottomSheet, updateBannerVisibility } from './bottomsheet.js';
+import { showProviderSelect, showModelSelect, closeBottomSheet } from './bottomsheet.js';
 import { PROVIDERS } from './providers.js';
 import { showSuccess, showError, showApiError, showInfo } from './toast.js';
 
@@ -9,10 +9,13 @@ let currentProviderId = 'groq';
 let attachedFiles = [];
 
 async function init() {
-    setupEventListeners();
-
+    // Zuerst State initialisieren (inkl. Skills laden)
     await state.init();
 
+    // Dann Event Listener setup
+    setupEventListeners();
+
+    // Chat laden falls vorhanden
     if (state.currentChatId && state.allChats[state.currentChatId]) {
         UI.clearChatArea();
         state.conversationHistory.forEach(msg => {
@@ -29,12 +32,12 @@ async function init() {
         }
     }
 
-    updateBannerVisibility();
+    UI.updateBannerVisibility();
     UI.updateIncognitoUI();
     UI.updateWelcomeScreen();
     UI.updateProviderUI();
     ensureScrollState();
-    
+
     const messageInput = document.getElementById('messageInput');
     messageInput?.focus();
 }
@@ -102,9 +105,13 @@ function autoResizeTextarea(textarea) {
 
 function ensureScrollState() {
     const chatMessages = document.getElementById('chatMessages');
+    const chatArea = document.getElementById('chatArea');
     if (!chatMessages) return;
     
-    const hasMessages = state.conversationHistory && state.conversationHistory.length > 0;
+    const hasStateMessages = state.conversationHistory && state.conversationHistory.length > 0;
+    const hasDOMMessages = chatArea && chatArea.children.length > 0;
+    const hasMessages = hasStateMessages || hasDOMMessages;
+    
     chatMessages.classList.toggle('has-welcome', !hasMessages);
     chatMessages.classList.toggle('no-scroll', !hasMessages);
     
@@ -254,12 +261,12 @@ async function autoSaveSettings() {
 
     const apiKey = apiKeyInput?.value.trim() || '';
     await state.setProviderKey(state.activeProvider, apiKey);
-    
+
     if (memoryToggle) {
         await state.setMemoryEnabled(memoryToggle.checked);
     }
 
-    updateBannerVisibility();
+    UI.updateBannerVisibility();
 }
 
 async function autoSaveAccount() {
@@ -309,6 +316,8 @@ function updateSkillsList() {
     if (!skillsList) return;
 
     const skills = state.getActiveSkills();
+    
+    console.log('updateSkillsList - skills:', skills);
 
     if (skills.length === 0) {
         skillsList.innerHTML = `
@@ -344,13 +353,13 @@ function updateSkillsList() {
     skillsList.querySelectorAll('.skill-item').forEach(item => {
         const skillId = item.getAttribute('data-skill-id');
         const skill = skills.find(s => s.id === skillId);
-        
+
         if (skill && !skill.builtIn) {
             item.querySelector('.edit-skill')?.addEventListener('click', (e) => {
                 e.stopPropagation();
                 openSkillEditor(skill);
             });
-            
+
             item.querySelector('.delete-skill')?.addEventListener('click', (e) => {
                 e.stopPropagation();
                 deleteSkill(skillId);
@@ -476,10 +485,36 @@ function setupModalClosers() {
 // ========================================
 
 function parseSkillInvocation(response) {
-    const match = response.trim().match(/^\[SKILL:([^:\]]+):([^\]]+)\]$/);
+    if (!response) return null;
+    
+    // More flexible regex that finds SKILL tags anywhere in the response
+    // Matches: [SKILL:skill-id:params] or [SKILL:skill-id]
+    const skillRegex = /\[SKILL:([^:\]]+)(?::([^\]]+))?\]/;
+    const match = response.match(skillRegex);
+    
     if (match) {
-        return { skillId: match[1].trim(), params: match[2].trim() };
+        const skillId = match[1].trim();
+        const params = match[2] ? match[2].trim() : '';
+        console.log('Skill invocation parsed:', { skillId, params });
+        return { skillId, params };
     }
+    
+    // Also check if response starts with skill tag (common pattern)
+    const startsWithSkill = response.trim().startsWith('[SKILL:');
+    if (startsWithSkill) {
+        const endBracket = response.indexOf(']');
+        if (endBracket > 0) {
+            const skillPart = response.substring(0, endBracket + 1);
+            const innerMatch = skillPart.match(/\[SKILL:([^:\]]+)(?::([^\]]+))?\]/);
+            if (innerMatch) {
+                const skillId = innerMatch[1].trim();
+                const params = innerMatch[2] ? innerMatch[2].trim() : '';
+                console.log('Skill invocation from start:', { skillId, params });
+                return { skillId, params };
+            }
+        }
+    }
+    
     return null;
 }
 
@@ -593,21 +628,48 @@ let slashDropdownVisible = false;
 
 function setupSlashCommands() {
     const messageInput = document.getElementById('messageInput');
+    const slashHint = document.getElementById('slashHint');
     if (!messageInput) return;
 
     messageInput.addEventListener('input', () => {
         const value = messageInput.value;
         const cursorPos = messageInput.selectionStart;
-        
+
         const textBeforeCursor = value.substring(0, cursorPos);
-        const slashMatch = textBeforeCursor.match(/^\/(\S*)$/);
         
-        if (slashMatch) {
+        // Check if cursor is right after a slash command start (at end of input or followed by space)
+        // Match patterns like: "/" or "/w" or "/web" but not "/web search"
+        const slashMatch = textBeforeCursor.match(/\/(\S*)$/);
+
+        // Show/hide slash hint
+        if (slashHint) {
+            if (textBeforeCursor.trim() === '/') {
+                slashHint.classList.remove('hidden');
+            } else if (!textBeforeCursor.includes('/')) {
+                slashHint.classList.add('hidden');
+            }
+        }
+
+        if (slashMatch && slashMatch[0].length <= 30) { // Prevent very long matches
             const filter = slashMatch[1].toLowerCase();
             showSlashDropdown(filter);
         } else {
             hideSlashDropdown();
         }
+    });
+
+    // Hide hint on blur
+    messageInput.addEventListener('blur', () => {
+        if (slashHint && !slashDropdownVisible) {
+            slashHint.classList.add('hidden');
+        }
+    });
+    
+    // Also hide dropdown on blur after a short delay
+    messageInput.addEventListener('blur', () => {
+        setTimeout(() => {
+            hideSlashDropdown();
+        }, 200);
     });
 }
 
@@ -616,12 +678,18 @@ function showSlashDropdown(filter) {
     if (!dropdown) return;
 
     const allSkills = state.getActiveSkills();
+    
+    // Debug logging
+    console.log('showSlashDropdown - filter:', filter, 'skills:', allSkills);
+    
     const filtered = allSkills.filter(skill => {
         const name = skill.name.toLowerCase();
         const id = skill.id.toLowerCase();
         const desc = (skill.description || '').toLowerCase();
         return name.includes(filter) || id.includes(filter) || desc.includes(filter);
     });
+
+    console.log('showSlashDropdown - filtered:', filtered);
 
     if (filtered.length === 0) {
         hideSlashDropdown();
@@ -768,6 +836,8 @@ async function handleSendMessage() {
 async function handleSkillExecution(skillInvocation, originalQuery) {
     const { skillId, params } = skillInvocation;
     
+    console.log('handleSkillExecution called with:', { skillId, params, originalQuery });
+
     // Show a subtle indicator that a skill is being used
     const skillIndicator = document.createElement('div');
     skillIndicator.className = 'message bot-message skill-indicator';
@@ -781,12 +851,14 @@ async function handleSkillExecution(skillInvocation, originalQuery) {
     `;
     const chatArea = document.getElementById('chatArea');
     chatArea.appendChild(skillIndicator);
-    
+
     const chatMessages = document.getElementById('chatMessages');
     chatMessages.scrollTop = chatMessages.scrollHeight;
 
     const result = await executeSkill(skillId, params);
     skillIndicator.remove();
+    
+    console.log('Skill execution result:', result);
 
     if (!result) {
         UI.addMessage('Skill konnte nicht ausgeführt werden.', 'bot');
@@ -803,7 +875,7 @@ async function handleSkillExecution(skillInvocation, originalQuery) {
         } else if (result.type === 'prompt-inject') {
             followUp = result.context + '\n\nVerwende KEINEN [SKILL:...] Tag mehr.';
         }
-        
+
         const finalResponse = await sendToAI(followUp);
         loadingMessage.remove();
         UI.addMessage(finalResponse, 'bot');
@@ -811,6 +883,7 @@ async function handleSkillExecution(skillInvocation, originalQuery) {
     } catch (error) {
         loadingMessage.remove();
         UI.addMessage(`Fehler bei der Verarbeitung: ${error.message}`, 'bot');
+        showApiError(error, 'Skill-Ausführung');
     }
 }
 
@@ -886,13 +959,13 @@ async function summarizeCurrentChat() {
 function openSettings() {
     const settingsModal = document.getElementById('settingsModal');
     const memoryToggle = document.getElementById('memoryToggle');
-    
+
     currentProviderId = state.activeProvider;
     UI.updateProviderUI();
-    UI.updateBannerForProvider();
-    
+    UI.updateBannerVisibility();
+
     if (memoryToggle) memoryToggle.checked = state.isMemoryEnabled;
-    
+
     settingsModal?.classList.add('active');
 }
 

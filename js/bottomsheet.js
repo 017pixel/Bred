@@ -211,13 +211,6 @@ export function showModelSelect(providerId, currentModel, onSelect) {
     return sheet;
 }
 
-export function updateBannerVisibility() {
-    const banner = document.getElementById('apiBanner');
-    if (banner) {
-        banner.classList.toggle('hidden', state.hasAnyKey());
-    }
-}
-
 export function escapeHtml(text) {
     const div = document.createElement('div');
     div.textContent = text;

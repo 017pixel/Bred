@@ -36,27 +36,44 @@ class StateManager {
     async init() {
         if (this.isInitialized) return;
 
-        await this.migrateFromLocalStorage();
-
-        this.providerKeys = await db.getSetting(CONFIG.STORAGE_KEYS.PROVIDER_KEYS) || this.providerKeys;
-        this.activeProvider = await db.getSetting(CONFIG.STORAGE_KEYS.ACTIVE_PROVIDER) || 'groq';
-        this.selectedModels = await db.getSetting(CONFIG.STORAGE_KEYS.MODELS) || this.selectedModels;
-        this.isIncognito = await db.getSetting(CONFIG.STORAGE_KEYS.INCOGNITO) === true;
-        this.isMemoryEnabled = await db.getSetting(CONFIG.STORAGE_KEYS.MEMORY_ENABLED) === true;
-        this.memory = await db.getSetting(CONFIG.STORAGE_KEYS.MEMORY) || '';
-        this.personalization = await db.getSetting(CONFIG.STORAGE_KEYS.PERSONALIZATION) || this.personalization;
-
-        this.allChats = await db.getAllChats();
-        this.currentChatId = await db.getSetting(CONFIG.STORAGE_KEYS.CURRENT_CHAT) || null;
-
-        if (this.currentChatId && this.allChats[this.currentChatId]) {
-            this.conversationHistory = this.allChats[this.currentChatId].history || [];
+        try {
+            await db.init();
+        } catch (e) {
+            console.error('Failed to initialize database:', e);
         }
 
-        this.skills = await db.getAllSkills();
-        await this.loadBuiltInSkills();
+        try {
+            await this.migrateFromLocalStorage();
+        } catch (e) {
+            console.warn('Migration error:', e);
+        }
+
+        try {
+            this.providerKeys = await db.getSetting(CONFIG.STORAGE_KEYS.PROVIDER_KEYS) || this.providerKeys;
+            this.activeProvider = await db.getSetting(CONFIG.STORAGE_KEYS.ACTIVE_PROVIDER) || 'groq';
+            this.selectedModels = await db.getSetting(CONFIG.STORAGE_KEYS.MODELS) || this.selectedModels;
+            this.isIncognito = await db.getSetting(CONFIG.STORAGE_KEYS.INCOGNITO) === true;
+            this.isMemoryEnabled = await db.getSetting(CONFIG.STORAGE_KEYS.MEMORY_ENABLED) === true;
+            this.memory = await db.getSetting(CONFIG.STORAGE_KEYS.MEMORY) || '';
+            this.personalization = await db.getSetting(CONFIG.STORAGE_KEYS.PERSONALIZATION) || this.personalization;
+
+            this.allChats = await db.getAllChats() || {};
+            this.currentChatId = await db.getSetting(CONFIG.STORAGE_KEYS.CURRENT_CHAT) || null;
+
+            if (this.currentChatId && this.allChats[this.currentChatId]) {
+                this.conversationHistory = this.allChats[this.currentChatId].history || [];
+            }
+
+            this.skills = await db.getAllSkills() || {};
+            console.log('Skills from DB:', Object.keys(this.skills));
+            
+            await this.loadBuiltInSkills();
+        } catch (e) {
+            console.error('Error loading data from DB:', e);
+        }
 
         this.isInitialized = true;
+        console.log('State initialized. Active provider:', this.activeProvider, 'Has key:', this.hasActiveProviderKey());
     }
 
     async loadBuiltInSkills() {
@@ -87,11 +104,19 @@ class StateManager {
             }
         ];
 
-        // Always reload built-in skills to ensure they're up-to-date
-        for (const skill of builtInSkills) {
-            await db.saveSkill(skill);
-            this.skills[skill.id] = skill;
+        try {
+            for (const skill of builtInSkills) {
+                await db.saveSkill(skill);
+                this.skills[skill.id] = skill;
+            }
+        } catch (e) {
+            console.error('Error saving built-in skills:', e);
+            for (const skill of builtInSkills) {
+                this.skills[skill.id] = skill;
+            }
         }
+        
+        console.log('Built-in Skills loaded:', Object.keys(this.skills));
     }
 
     async migrateFromLocalStorage() {
@@ -153,6 +178,11 @@ class StateManager {
 
     hasAnyKey() {
         return Object.values(this.providerKeys).some(key => key && key.trim() !== '');
+    }
+
+    hasActiveProviderKey() {
+        const key = this.providerKeys[this.activeProvider];
+        return key && key.trim() !== '';
     }
 
     async setProviderKey(provider, key) {
@@ -295,23 +325,37 @@ class StateManager {
     getSkillsPrompt() {
         const activeSkills = this.getActiveSkills();
         if (activeSkills.length === 0) return '';
-        
+
         let prompt = '\n\n## Verfügbare Skills\n';
-        prompt += 'Du hast Zugriff auf folgende Skills. Entscheide SELBSTSTÄNDIG, wann du einen Skill verwenden musst.\n';
-        prompt += 'Wenn du einen Skill verwenden willst, antworte AUSSCHLIESSLICH mit dem Skill-Aufruf im folgenden Format (NICHTS anderes davor oder danach):\n';
-        prompt += '[SKILL:skill-id:parameter]\n\n';
-        prompt += 'Beispiel für eine Web-Suche: [SKILL:web-search:Python Tutorial 2024]\n\n';
-        prompt += 'WICHTIG:\n';
-        prompt += '- Wenn du einen Skill aufrufst, darf deine Antwort NUR den [SKILL:...] Tag enthalten, NICHTS anderes.\n';
-        prompt += '- Nutze den Web-Suche Skill, wenn der Benutzer nach aktuellen Informationen fragt, die du nicht sicher weißt.\n';
-        prompt += '- Nutze Skills auch ohne explizite Aufforderung, wenn es sinnvoll ist.\n';
-        prompt += '- Wenn du die Frage ohne Skill beantworten kannst, antworte direkt OHNE Skill-Aufruf.\n\n';
+        prompt += 'Du hast Zugriff auf folgende Skills. Diese erweitern deine Fähigkeiten erheblich.\n\n';
         
-        prompt += '### Skill-Liste:\n';
+        prompt += '### WANN DU EINEN SKILL VERWENDEN MUSST:\n';
+        prompt += '- Wenn der Benutzer nach **aktuellen Informationen** fragt (News, Wetter, Sportergebnisse, etc.)\n';
+        prompt += '- Wenn der Benutzer eine **Web-Suche** explizit anfordert\n';
+        prompt += '- Wenn du unsicher bist oder dein Wissen veraltet sein könnte\n';
+        prompt += '- Wenn der Benutzer nach einer **Prompt-Verbesserung** oder **Design-Beratung** fragt\n\n';
+        
+        prompt += '### SKILL-AUFRUF FORMAT:\n';
+        prompt += 'Wenn du einen Skill verwenden musst, antworte EXKLUSIV mit diesem Format:\n';
+        prompt += '```\n[SKILL:skill-id:deine-parameter]\n```\n';
+        prompt += 'WICHTIG: Deine Antwort darf NUR diesen einen Tag enthalten, nichts anderes!\n\n';
+        
+        prompt += '### Beispiele:\n';
+        prompt += '- Benutzer fragt "Was ist der aktuelle Stand zu KI?" → Antworte: `[SKILL:web-search:aktuelle KI Entwicklungen 2024]`\n';
+        prompt += '- Benutzer sagt "optimiere meinen Prompt" → Antworte: `[SKILL:prompt-optimizer:Hier ist der Prompt des Benutzers]`\n\n';
+        
+        prompt += '### NACH SKILL-AUSFÜHRUNG:\n';
+        prompt += 'Nachdem ein Skill ausgeführt wurde, erhältst du zusätzliche Informationen.\n';
+        prompt += 'Verwende diese Informationen, um die Frage des Benutzers vollständig zu beantworten.\n\n';
+
+        prompt += '### AKTUELLE SKILLS:\n';
         for (const skill of activeSkills) {
             prompt += `- **${skill.name}** (ID: \`${skill.id}\`): ${skill.description}\n`;
+            if (skill.triggers && skill.triggers.length > 0) {
+                prompt += `  Trigger-Wörter: ${skill.triggers.join(', ')}\n`;
+            }
         }
-        
+
         return prompt;
     }
 

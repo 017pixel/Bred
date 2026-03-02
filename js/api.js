@@ -112,7 +112,7 @@ function buildSystemPrompt() {
     }
 
     const parts = ["Du bist BREAD, ein hilfreicher und intelligenter KI-Assistent. Halte deine Antworten kurz und prägnant, es sei denn, der Benutzer fragt ausdrücklich nach Details.\n\n"];
-    
+
     parts.push("## Antwort-Formatierung\n");
     parts.push("Verwende Markdown für deine Antworten:\n");
     parts.push("- **Fett** für wichtige Begriffe\n");
@@ -127,7 +127,7 @@ function buildSystemPrompt() {
     parts.push("  | Inhalt   | Inhalt   |\n");
     parts.push("- > für Zitate\n");
     parts.push("- - oder 1. für Listen\n\n");
-    
+
     const p = state.personalization;
 
     if (p.name) parts.push(`Der Name des Benutzers ist ${p.name}.`);
@@ -141,10 +141,13 @@ function buildSystemPrompt() {
 
     const skillsPrompt = state.getSkillsPrompt();
     if (skillsPrompt) {
+        console.log('Skills-Prompt wird hinzugefügt, Länge:', skillsPrompt.length);
         parts.push(skillsPrompt);
     }
 
-    return parts.join('\n');
+    const fullPrompt = parts.join('\n');
+    console.log('System-Prompt aufgebaut, Gesamtlänge:', fullPrompt.length);
+    return fullPrompt;
 }
 
 export async function streamToAI(userMessage, onChunk) {

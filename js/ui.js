@@ -366,24 +366,19 @@ export function updateProviderUI() {
 export function updateBannerVisibility() {
     const banner = document.getElementById('apiBanner');
     const bannerText = document.getElementById('bannerText');
-    
+
     if (banner) {
-        const hasKey = state.hasAnyKey();
+        // Prüfe, ob der aktuelle Provider einen Key hat
+        const hasKey = state.hasActiveProviderKey();
         banner.classList.toggle('hidden', hasKey);
-        
+
         if (!hasKey && bannerText) {
-            bannerText.textContent = 'Bitte API-Key eingeben';
+            const provider = PROVIDERS[state.activeProvider];
+            bannerText.textContent = `${provider?.name || 'Provider'} API-Key erforderlich`;
         }
     }
 }
 
 export function updateBannerForProvider() {
-    const banner = document.getElementById('apiBanner');
-    const bannerText = document.getElementById('bannerText');
-    
-    if (banner && !state.hasAnyKey()) {
-        if (bannerText) {
-            bannerText.textContent = `${PROVIDERS[state.activeProvider]?.name || 'Provider'} API-Key erforderlich`;
-        }
-    }
+    updateBannerVisibility();
 }
