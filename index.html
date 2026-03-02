@@ -30,7 +30,23 @@
         if ('serviceWorker' in navigator) {
             window.addEventListener('load', () => {
                 navigator.serviceWorker.register('./sw.js')
-                    .then(registration => console.log('SW registered'))
+                    .then(registration => {
+                        console.log('SW registered');
+                        
+                        // Prüfe auf Updates beim Service Worker
+                        registration.addEventListener('updatefound', () => {
+                            const newWorker = registration.installing;
+                            newWorker.addEventListener('statechange', () => {
+                                if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
+                                    // Neuer Service Worker ist bereit - Seite neu laden für Update
+                                    console.log('Neue Version verfügbar! Seite wird aktualisiert...');
+                                    if (confirm('Eine neue Version ist verfügbar. Jetzt aktualisieren?')) {
+                                        window.location.reload();
+                                    }
+                                }
+                            });
+                        });
+                    })
                     .catch(err => console.log('SW registration failed: ', err));
             });
         }
@@ -89,7 +105,7 @@
         <div class="slash-command-dropdown" id="slashCommandDropdown"></div>
         <div class="input-row-screenshot">
             <div class="input-main">
-                <textarea id="messageInput" class="premium-input" placeholder="Frage mich irgendwas... (/ für Skills)"
+                <textarea id="messageInput" class="premium-input" placeholder="Frage mich irgendwas..."
                     autocomplete="off" rows="1"></textarea>
             </div>
             <div class="input-actions-group">
@@ -102,6 +118,7 @@
             </div>
         </div>
         <div class="attached-files" id="attachedFiles"></div>
+        <div class="slash-hint hidden" id="slashHint">Tippe / für Skills</div>
     </div>
     
     <input type="file" id="fileInput" multiple accept="image/*,.pdf,.txt,.md,.json,.csv" style="display: none;">
