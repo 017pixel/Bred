@@ -1,36 +1,73 @@
 import { state } from './state.js';
 import { PROVIDERS } from './providers.js';
 
-export async function sendToAI(userMessage) {
-    state.conversationHistory.push({
-        role: 'user',
-        content: userMessage
-    });
+const MAX_HISTORY_MESSAGES = 20;
 
+function buildRequestMessages(userMessage, attachments = []) {
     const messages = [];
+
     const systemPrompt = buildSystemPrompt();
     if (systemPrompt) {
-        messages.push({
-            role: 'system',
-            content: systemPrompt
+        messages.push({ role: 'system', content: systemPrompt });
+    }
+
+    // Die User-Nachricht wird bewusst außerhalb der History angehängt,
+    // damit Skill-Follow-up-Aufrufe (pushUser=false) die History nicht verändern.
+    const history = state.conversationHistory.slice(-(MAX_HISTORY_MESSAGES - 1));
+    messages.push(...history);
+    messages.push({ role: 'user', content: buildUserContent(userMessage, attachments) });
+
+    return messages;
+}
+
+function buildUserContent(userMessage, attachments) {
+    const textFiles = attachments.filter(a => a.type === 'text');
+    const images = attachments.filter(a => a.type === 'image');
+
+    if (images.length > 0) {
+        const parts = [];
+        if (userMessage) {
+            parts.push({ type: 'text', text: userMessage });
+        }
+        if (textFiles.length > 0) {
+            parts.push({ type: 'text', text: formatTextFiles(textFiles) });
+        }
+        images.forEach(img => {
+            parts.push({ type: 'image_url', image_url: { url: img.dataUrl } });
         });
+        return parts;
     }
 
-    const historyContext = state.conversationHistory.slice(-20);
-    messages.push(...historyContext);
-
-    const provider = PROVIDERS[state.activeProvider];
-    if (!provider) {
-        throw new Error('Provider nicht gefunden');
+    let text = userMessage || '';
+    if (textFiles.length > 0) {
+        const fileBlock = formatTextFiles(textFiles);
+        text = text ? `${text}\n\n${fileBlock}` : fileBlock;
     }
+    return text;
+}
 
+function formatTextFiles(textFiles) {
+    return textFiles
+        .map(file => `[Datei: ${file.name}]\n${file.content}`)
+        .join('\n\n');
+}
+
+function buildRequestBody(messages, stream) {
     const requestBody = {
         model: state.selectedModel,
         messages: messages,
         temperature: 0.7,
-        max_tokens: 2048,
+        max_tokens: 2048
     };
 
+    if (stream) {
+        requestBody.stream = true;
+    }
+
+    return requestBody;
+}
+
+function getProviderHeaders(provider) {
     const headers = {
         'Content-Type': 'application/json',
         'Authorization': `Bearer ${state.apiKey}`
@@ -40,15 +77,53 @@ export async function sendToAI(userMessage) {
         Object.assign(headers, provider.headers);
     }
 
+    if (provider.id === 'openrouter') {
+        headers['HTTP-Referer'] = window.location.origin;
+    }
+
+    return headers;
+}
+
+function getProvider() {
+    const provider = PROVIDERS[state.activeProvider];
+    if (!provider) {
+        throw new Error('Provider nicht gefunden');
+    }
+    if (!state.apiKey) {
+        throw new Error('Bitte gib zuerst einen API-Key ein.');
+    }
+    return provider;
+}
+
+async function parseErrorResponse(response, provider) {
+    try {
+        const errorData = await response.json();
+        return errorData.error?.message || `${provider.name} API-Fehler (${response.status})`;
+    } catch (e) {
+        return `${provider.name} API-Fehler (${response.status})`;
+    }
+}
+
+export async function sendToAI(userMessage, attachments = [], pushUser = true) {
+    const provider = getProvider();
+
+    if (pushUser) {
+        state.conversationHistory.push({
+            role: 'user',
+            content: userMessage
+        });
+    }
+
+    const messages = buildRequestMessages(userMessage, attachments);
+
     const response = await fetch(provider.url, {
         method: 'POST',
-        headers: headers,
-        body: JSON.stringify(requestBody)
+        headers: getProviderHeaders(provider),
+        body: JSON.stringify(buildRequestBody(messages, false))
     });
 
     if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}));
-        throw new Error(errorData.error?.message || `${provider.name} API-Fehler (${response.status})`);
+        throw new Error(await parseErrorResponse(response, provider));
     }
 
     const data = await response.json();
@@ -67,6 +142,68 @@ export async function sendToAI(userMessage) {
     return botResponse;
 }
 
+export async function streamToAI(userMessage, attachments = [], onChunk, pushUser = true) {
+    const provider = getProvider();
+
+    if (pushUser) {
+        state.conversationHistory.push({
+            role: 'user',
+            content: userMessage
+        });
+    }
+
+    const messages = buildRequestMessages(userMessage, attachments);
+
+    const response = await fetch(provider.url, {
+        method: 'POST',
+        headers: getProviderHeaders(provider),
+        body: JSON.stringify(buildRequestBody(messages, true))
+    });
+
+    if (!response.ok) {
+        throw new Error(await parseErrorResponse(response, provider));
+    }
+
+    const reader = response.body.getReader();
+    const decoder = new TextDecoder();
+    let fullContent = '';
+    let buffer = '';
+
+    while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+
+        buffer += decoder.decode(value, { stream: true });
+        const lines = buffer.split('\n');
+        buffer = lines.pop() || '';
+
+        for (const line of lines) {
+            if (!line.startsWith('data: ')) continue;
+
+            const data = line.slice(6).trim();
+            if (data === '[DONE]') continue;
+
+            try {
+                const parsed = JSON.parse(data);
+                const content = parsed.choices?.[0]?.delta?.content;
+                if (content) {
+                    fullContent += content;
+                    onChunk(content);
+                }
+            } catch (e) {
+                // Unvollständige oder unerwartete SSE-Zeile ignorieren
+            }
+        }
+    }
+
+    state.conversationHistory.push({
+        role: 'assistant',
+        content: fullContent
+    });
+
+    return fullContent;
+}
+
 export async function generateSummary(conversationHistory) {
     if (!conversationHistory || conversationHistory.length < 2) return null;
 
@@ -75,11 +212,9 @@ export async function generateSummary(conversationHistory) {
         content: 'Fasse diesen Chatverlauf in maximal 2-3 Sätzen zusammen. Konzentriere dich auf wichtige Informationen über den Benutzer oder behandelte Themen, die für zukünftige Gespräche relevant sein könnten. Antworte NUR mit der Zusammenfassung.'
     };
 
-    const messages = [summaryPrompt, ...conversationHistory];
-
     const provider = PROVIDERS['groq'];
     const apiKey = state.providerKeys['groq'];
-    
+
     if (!apiKey) return null;
 
     try {
@@ -91,7 +226,7 @@ export async function generateSummary(conversationHistory) {
             },
             body: JSON.stringify({
                 model: 'llama-3.1-8b-instant',
-                messages: messages,
+                messages: [summaryPrompt, ...conversationHistory],
                 temperature: 0.5,
                 max_tokens: 200
             })
@@ -141,93 +276,8 @@ function buildSystemPrompt() {
 
     const skillsPrompt = state.getSkillsPrompt();
     if (skillsPrompt) {
-        console.log('Skills-Prompt wird hinzugefügt, Länge:', skillsPrompt.length);
         parts.push(skillsPrompt);
     }
 
-    const fullPrompt = parts.join('\n');
-    console.log('System-Prompt aufgebaut, Gesamtlänge:', fullPrompt.length);
-    return fullPrompt;
-}
-
-export async function streamToAI(userMessage, onChunk) {
-    state.conversationHistory.push({
-        role: 'user',
-        content: userMessage
-    });
-
-    const messages = [];
-    const systemPrompt = buildSystemPrompt();
-    if (systemPrompt) {
-        messages.push({ role: 'system', content: systemPrompt });
-    }
-
-    const historyContext = state.conversationHistory.slice(-20);
-    messages.push(...historyContext);
-
-    const provider = PROVIDERS[state.activeProvider];
-    if (!provider) {
-        throw new Error('Provider nicht gefunden');
-    }
-
-    const requestBody = {
-        model: state.selectedModel,
-        messages: messages,
-        temperature: 0.7,
-        max_tokens: 2048,
-        stream: true
-    };
-
-    const headers = {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${state.apiKey}`
-    };
-
-    if (provider.headers) {
-        Object.assign(headers, provider.headers);
-    }
-
-    const response = await fetch(provider.url, {
-        method: 'POST',
-        headers: headers,
-        body: JSON.stringify(requestBody)
-    });
-
-    if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}));
-        throw new Error(errorData.error?.message || `${provider.name} API-Fehler`);
-    }
-
-    const reader = response.body.getReader();
-    const decoder = new TextDecoder();
-    let fullContent = '';
-
-    while (true) {
-        const { done, value } = await reader.read();
-        if (done) break;
-
-        const chunk = decoder.decode(value);
-        const lines = chunk.split('\n').filter(line => line.startsWith('data: '));
-
-        for (const line of lines) {
-            const data = line.slice(6);
-            if (data === '[DONE]') continue;
-
-            try {
-                const parsed = JSON.parse(data);
-                const content = parsed.choices?.[0]?.delta?.content;
-                if (content) {
-                    fullContent += content;
-                    onChunk(content);
-                }
-            } catch (e) {}
-        }
-    }
-
-    state.conversationHistory.push({
-        role: 'assistant',
-        content: fullContent
-    });
-
-    return fullContent;
+    return parts.join('\n');
 }

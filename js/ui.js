@@ -5,11 +5,20 @@ export function addMessage(text, sender, imageData = null) {
     const messageDiv = document.createElement('div');
     messageDiv.className = `message ${sender}-message`;
 
-    if (imageData) {
-        const img = document.createElement('img');
-        img.src = imageData;
-        img.className = 'message-image';
-        messageDiv.appendChild(img);
+    const images = Array.isArray(imageData) ? imageData : (imageData ? [imageData] : []);
+
+    if (images.length > 0) {
+        const imageGroup = document.createElement('div');
+        imageGroup.className = 'message-image-group';
+        images.forEach(src => {
+            const img = document.createElement('img');
+            img.src = src;
+            img.className = 'message-image';
+            img.alt = 'Angehängtes Bild';
+            img.loading = 'lazy';
+            imageGroup.appendChild(img);
+        });
+        messageDiv.appendChild(imageGroup);
     }
 
     if (text) {
@@ -109,7 +118,10 @@ function formatMessage(text) {
     
     formatted = formatted.replace(/^\s*\d+\.\s+(.+)$/gm, '<li class="numbered">$1</li>');
     
-    formatted = formatted.replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2" target="_blank" rel="noopener">$1</a>');
+    formatted = formatted.replace(/\[([^\]]+)\]\(([^)]+)\)/g, (match, label, url) => {
+        const safeUrl = sanitizeUrl(url);
+        return `<a href="${safeUrl}" target="_blank" rel="noopener noreferrer">${label}</a>`;
+    });
     
     formatted = formatted.replace(/\n\n/g, '</p><p>');
     formatted = formatted.replace(/\n/g, '<br>');
@@ -157,6 +169,14 @@ export function escapeHtml(text) {
     const div = document.createElement('div');
     div.textContent = text;
     return div.innerHTML;
+}
+
+function sanitizeUrl(url) {
+    const trimmed = url.trim();
+    if (/^(https?:\/\/|mailto:)/i.test(trimmed)) {
+        return trimmed;
+    }
+    return '#';
 }
 
 window.copyCode = function(btn) {
@@ -377,8 +397,4 @@ export function updateBannerVisibility() {
             bannerText.textContent = `${provider?.name || 'Provider'} API-Key erforderlich`;
         }
     }
-}
-
-export function updateBannerForProvider() {
-    updateBannerVisibility();
 }

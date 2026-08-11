@@ -56,38 +56,37 @@ export const PROVIDERS = {
         models: [],
         defaultModel: 'meta-llama/llama-3.3-70b-instruct',
         headers: {
-            'HTTP-Referer': window.location.origin,
             'X-Title': 'BREAD AI'
         },
         categories: [
             { name: 'OpenAI', models: [
+                { id: 'openai/gpt-4.1', name: 'GPT-4.1' },
+                { id: 'openai/gpt-4.1-mini', name: 'GPT-4.1 Mini' },
                 { id: 'openai/gpt-4o', name: 'GPT-4o' },
-                { id: 'openai/gpt-4o-mini', name: 'GPT-4o Mini' },
-                { id: 'openai/o1-preview', name: 'o1 Preview' },
-                { id: 'openai/o1-mini', name: 'o1 Mini' }
+                { id: 'openai/o3-mini', name: 'o3 Mini' }
             ]},
             { name: 'Anthropic', models: [
-                { id: 'anthropic/claude-4.6-sonnet', name: 'Claude 4.6 Sonnet' },
-                { id: 'anthropic/claude-4.5-sonnet', name: 'Claude 4.5 Sonnet' },
-                { id: 'anthropic/claude-3.5-haiku', name: 'Claude 3.5 Haiku' }
+                { id: 'anthropic/claude-sonnet-5', name: 'Claude Sonnet 5' },
+                { id: 'anthropic/claude-sonnet-4.5', name: 'Claude Sonnet 4.5' },
+                { id: 'anthropic/claude-opus-5', name: 'Claude Opus 5' }
             ]},
             { name: 'Google', models: [
-                { id: 'google/gemini-2.5-pro-preview', name: 'Gemini 2.5 Pro' },
-                { id: 'google/gemini-2.5-flash-preview', name: 'Gemini 2.5 Flash' },
-                { id: 'google/gemini-2.0-flash-001', name: 'Gemini 2.0 Flash' }
+                { id: 'google/gemini-2.5-pro', name: 'Gemini 2.5 Pro' },
+                { id: 'google/gemini-2.5-flash', name: 'Gemini 2.5 Flash' },
+                { id: 'google/gemini-2.5-flash-lite', name: 'Gemini 2.5 Flash Lite' }
             ]},
             { name: 'Meta', models: [
                 { id: 'meta-llama/llama-3.3-70b-instruct', name: 'Llama 3.3 70B' },
-                { id: 'meta-llama/llama-3.1-8b-instruct', name: 'Llama 3.1 8B' },
-                { id: 'meta-llama/llama-4-scout-17b-16e-instruct', name: 'Llama 4 Scout' }
+                { id: 'meta-llama/llama-4-maverick', name: 'Llama 4 Maverick' },
+                { id: 'meta-llama/llama-4-scout', name: 'Llama 4 Scout' }
             ]},
             { name: 'DeepSeek', models: [
                 { id: 'deepseek/deepseek-r1', name: 'DeepSeek R1' },
-                { id: 'deepseek/deepseek-chat-v3-0324', name: 'DeepSeek V3' }
+                { id: 'deepseek/deepseek-chat-v3.1', name: 'DeepSeek V3.1' }
             ]},
             { name: 'Mistral', models: [
-                { id: 'mistralai/mistral-large-2411', name: 'Mistral Large' },
-                { id: 'mistralai/mistral-small-24b-instruct-2501', name: 'Mistral Small 24B' }
+                { id: 'mistralai/mistral-small-3.2-24b-instruct', name: 'Mistral Small 3.2' },
+                { id: 'mistralai/mistral-large-2411', name: 'Mistral Large' }
             ]}
         ]
     }

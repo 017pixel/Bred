@@ -1,21 +1,24 @@
 import { state } from './state.js';
-import { sendToAI, generateSummary } from './api.js';
+import { streamToAI, generateSummary } from './api.js';
 import * as UI from './ui.js';
 import { showProviderSelect, showModelSelect, closeBottomSheet } from './bottomsheet.js';
 import { PROVIDERS } from './providers.js';
-import { showSuccess, showError, showApiError, showInfo } from './toast.js';
+import { showSuccess, showError, showApiError } from './toast.js';
 
-let currentProviderId = 'groq';
+const MAX_ATTACHMENT_SIZE = 10 * 1024 * 1024;
+const PDFJS_CDN = 'https://cdn.jsdelivr.net/npm/pdfjs-dist@4.2.67/legacy/build/pdf.min.mjs';
+const PDFJS_WORKER = 'https://cdn.jsdelivr.net/npm/pdfjs-dist@4.2.67/legacy/build/pdf.worker.min.mjs';
+
 let attachedFiles = [];
+let isSending = false;
+let editingSkillId = null;
+let slashDropdownVisible = false;
 
 async function init() {
-    // Zuerst State initialisieren (inkl. Skills laden)
     await state.init();
-
-    // Dann Event Listener setup
+    registerServiceWorker();
     setupEventListeners();
 
-    // Chat laden falls vorhanden
     if (state.currentChatId && state.allChats[state.currentChatId]) {
         UI.clearChatArea();
         state.conversationHistory.forEach(msg => {
@@ -42,6 +45,23 @@ async function init() {
     messageInput?.focus();
 }
 
+function registerServiceWorker() {
+    if (!('serviceWorker' in navigator)) return;
+
+    let refreshing = false;
+    navigator.serviceWorker.addEventListener('controllerchange', () => {
+        if (refreshing) return;
+        refreshing = true;
+        window.location.reload();
+    });
+
+    window.addEventListener('load', () => {
+        navigator.serviceWorker.register('./sw.js').catch(err => {
+            console.error('SW registration failed:', err);
+        });
+    });
+}
+
 function setupEventListeners() {
     const messageInput = document.getElementById('messageInput');
     const sendButton = document.getElementById('sendButton');
@@ -53,11 +73,16 @@ function setupEventListeners() {
     const openSettingsBtn = document.getElementById('openSettingsBtn');
     const attachFileBtn = document.getElementById('attachFileBtn');
     const fileInput = document.getElementById('fileInput');
+    const apiKeyForm = document.getElementById('apiKeyForm');
 
     newChatButton?.addEventListener('click', handleNewChat);
-
     sendButton?.addEventListener('click', handleSendMessage);
-    
+
+    apiKeyForm?.addEventListener('submit', (e) => {
+        e.preventDefault();
+        autoSaveSettings();
+    });
+
     if (messageInput) {
         messageInput.addEventListener('keydown', (e) => {
             if (e.key === 'Enter' && !e.shiftKey) {
@@ -65,7 +90,7 @@ function setupEventListeners() {
                 handleSendMessage();
             }
         });
-        
+
         messageInput.addEventListener('input', () => {
             autoResizeTextarea(messageInput);
         });
@@ -76,11 +101,6 @@ function setupEventListeners() {
         e.stopPropagation();
         fileInput?.click();
     });
-    
-    attachFileBtn?.addEventListener('touchstart', (e) => {
-        e.preventDefault();
-        fileInput?.click();
-    }, { passive: false });
 
     fileInput?.addEventListener('change', handleFileSelect);
 
@@ -107,14 +127,14 @@ function ensureScrollState() {
     const chatMessages = document.getElementById('chatMessages');
     const chatArea = document.getElementById('chatArea');
     if (!chatMessages) return;
-    
+
     const hasStateMessages = state.conversationHistory && state.conversationHistory.length > 0;
     const hasDOMMessages = chatArea && chatArea.children.length > 0;
     const hasMessages = hasStateMessages || hasDOMMessages;
-    
+
     chatMessages.classList.toggle('has-welcome', !hasMessages);
     chatMessages.classList.toggle('no-scroll', !hasMessages);
-    
+
     if (hasMessages) {
         chatMessages.style.overflowY = 'auto';
     } else {
@@ -122,53 +142,124 @@ function ensureScrollState() {
     }
 }
 
+// ========================================
+// File Attachments
+// ========================================
+
 function handleFileSelect(e) {
     const files = Array.from(e.target.files);
     const attachedFilesEl = document.getElementById('attachedFiles');
-    
+
     files.forEach(file => {
-        if (file.size > 10 * 1024 * 1024) {
-            showError(`${file.name} ist zu groß (max. 10MB)`);
-            return;
-        }
-        
-        attachedFiles.push(file);
-        
-        const fileEl = document.createElement('div');
-        fileEl.className = 'attached-file';
-        fileEl.dataset.fileName = file.name;
-        fileEl.innerHTML = `
-            <span class="material-symbols-outlined" style="font-size: 16px; color: var(--accent-primary);">${getFileIcon(file.type)}</span>
-            <span class="attached-file-name">${file.name}</span>
-            <button class="attached-file-remove" title="Entfernen">
-                <span class="material-symbols-outlined">close</span>
-            </button>
-        `;
-        
-        fileEl.querySelector('.attached-file-remove').addEventListener('click', () => {
-            attachedFiles = attachedFiles.filter(f => f.name !== file.name);
-            fileEl.remove();
-            if (attachedFiles.length === 0) {
-                attachedFilesEl?.classList.remove('has-files');
-            }
+        readAttachment(file).then(attachment => {
+            attachedFiles.push(attachment);
+            renderAttachmentChip(attachment);
+        }).catch(err => {
+            showError(err.message);
         });
-        
-        attachedFilesEl?.appendChild(fileEl);
     });
-    
+
     if (attachedFiles.length > 0) {
         attachedFilesEl?.classList.add('has-files');
     }
-    
+
     e.target.value = '';
 }
 
-function getFileIcon(mimeType) {
-    if (mimeType.startsWith('image/')) return 'image';
-    if (mimeType === 'application/pdf') return 'picture_as_pdf';
-    if (mimeType.includes('text') || mimeType.includes('json') || mimeType.includes('csv')) return 'description';
-    return 'insert_drive_file';
+async function readAttachment(file) {
+    if (file.size > MAX_ATTACHMENT_SIZE) {
+        throw new Error(`${file.name} ist zu groß (max. 10MB)`);
+    }
+
+    if (file.type.startsWith('image/')) {
+        const dataUrl = await readFileAsDataURL(file);
+        return { type: 'image', file, name: file.name, dataUrl };
+    }
+
+    if (file.type === 'application/pdf' || file.name.toLowerCase().endsWith('.pdf')) {
+        const content = await extractPdfText(file);
+        return { type: 'text', file, name: file.name, content };
+    }
+
+    if (file.type.startsWith('text/') || /\.(txt|md|json|csv)$/i.test(file.name)) {
+        const content = await file.text();
+        return { type: 'text', file, name: file.name, content };
+    }
+
+    throw new Error(`${file.name}: Dateityp wird nicht unterstützt`);
 }
+
+function readFileAsDataURL(file) {
+    return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => resolve(reader.result);
+        reader.onerror = () => reject(new Error(`${file.name} konnte nicht gelesen werden`));
+        reader.readAsDataURL(file);
+    });
+}
+
+async function extractPdfText(file) {
+    try {
+        const pdfjsLib = await import(PDFJS_CDN);
+        pdfjsLib.GlobalWorkerOptions.workerSrc = PDFJS_WORKER;
+        const pdf = await pdfjsLib.getDocument({ data: await file.arrayBuffer() }).promise;
+
+        let text = '';
+        for (let pageNum = 1; pageNum <= pdf.numPages; pageNum++) {
+            const page = await pdf.getPage(pageNum);
+            const content = await page.getTextContent();
+            text += content.items.map(item => item.str).join(' ') + '\n';
+        }
+
+        const trimmed = text.trim();
+        if (!trimmed) {
+            throw new Error('Kein Text gefunden');
+        }
+        return trimmed;
+    } catch (err) {
+        console.warn('PDF extraction failed:', err);
+        if (err?.message === 'Kein Text gefunden') {
+            throw new Error(`${file.name}: Kein Text in der PDF gefunden`);
+        }
+        throw new Error(`${file.name}: PDF konnte nicht gelesen werden`);
+    }
+}
+
+function renderAttachmentChip(attachment) {
+    const attachedFilesEl = document.getElementById('attachedFiles');
+
+    const fileEl = document.createElement('div');
+    fileEl.className = 'attached-file';
+    fileEl.dataset.fileName = attachment.name;
+    fileEl.innerHTML = `
+        <span class="material-symbols-outlined" style="font-size: 16px; color: var(--accent-primary);">${getFileIcon(attachment)}</span>
+        <span class="attached-file-name">${escapeHtml(attachment.name)}</span>
+        <button class="attached-file-remove" title="Entfernen" aria-label="Datei entfernen">
+            <span class="material-symbols-outlined">close</span>
+        </button>
+    `;
+
+    fileEl.querySelector('.attached-file-remove').addEventListener('click', () => {
+        attachedFiles = attachedFiles.filter(f => f !== attachment);
+        fileEl.remove();
+        if (attachedFiles.length === 0) {
+            attachedFilesEl?.classList.remove('has-files');
+        }
+    });
+
+    attachedFilesEl?.appendChild(fileEl);
+    attachedFilesEl?.classList.add('has-files');
+}
+
+function getFileIcon(attachment) {
+    if (attachment.type === 'image') return 'image';
+    if (attachment.file.type === 'application/pdf') return 'picture_as_pdf';
+    return 'description';
+}
+
+// ========================================
+// Settings Modal
+// ========================================
 
 function setupSettingsListeners() {
     const closeModalBtn = document.getElementById('closeModal');
@@ -186,7 +277,6 @@ function setupSettingsListeners() {
 
     providerSelectBtn?.addEventListener('click', () => {
         showProviderSelect(state.activeProvider, async (providerId) => {
-            currentProviderId = providerId;
             await state.setActiveProvider(providerId);
             UI.updateProviderUI();
             autoSaveSettings();
@@ -206,10 +296,11 @@ function setupSettingsListeners() {
         if (apiKeyInput) apiKeyInput.type = isPassword ? 'text' : 'password';
         const icon = toggleVisibility.querySelector('.material-symbols-outlined');
         if (icon) icon.textContent = isPassword ? 'visibility_off' : 'visibility';
+        toggleVisibility.setAttribute('aria-label', isPassword ? 'API-Key verbergen' : 'API-Key anzeigen');
     });
 
     apiKeyInput?.addEventListener('input', debounce(autoSaveSettings, 500));
-    
+
     memoryToggle?.addEventListener('change', async () => {
         await state.setMemoryEnabled(memoryToggle.checked);
         showSuccess('Gedächtnis ' + (memoryToggle.checked ? 'aktiviert' : 'deaktiviert'));
@@ -236,7 +327,7 @@ function setupAccountListeners() {
         UI.updateWelcomeScreen();
         autoSaveAccount();
     });
-    
+
     userNameInput?.addEventListener('input', debounce(autoSaveAccount, 500));
     userHobbiesInput?.addEventListener('input', debounce(autoSaveAccount, 500));
     userInstructionsInput?.addEventListener('input', debounce(autoSaveAccount, 500));
@@ -246,12 +337,8 @@ function setupAccountListeners() {
 function debounce(func, wait) {
     let timeout;
     return function executedFunction(...args) {
-        const later = () => {
-            clearTimeout(timeout);
-            func(...args);
-        };
         clearTimeout(timeout);
-        timeout = setTimeout(later, wait);
+        timeout = setTimeout(() => func(...args), wait);
     };
 }
 
@@ -282,20 +369,17 @@ async function autoSaveAccount() {
         instructions: userInstructionsInput?.value.trim() || '',
         about: userAboutInput?.value.trim() || ''
     });
-    
+
     if (incognitoToggle) {
         await state.setIncognito(!incognitoToggle.checked);
     }
-    
+
     UI.updateWelcomeScreen();
 }
 
-function setupHistoryListeners() {
-    const closeHistoryModal = document.getElementById('closeHistoryModal');
-    closeHistoryModal?.addEventListener('click', closeHistory);
-}
-
-let editingSkillId = null;
+// ========================================
+// Skills Modal
+// ========================================
 
 function setupSkillsListeners() {
     const closeSkillsModal = document.getElementById('closeSkillsModal');
@@ -316,8 +400,6 @@ function updateSkillsList() {
     if (!skillsList) return;
 
     const skills = state.getActiveSkills();
-    
-    console.log('updateSkillsList - skills:', skills);
 
     if (skills.length === 0) {
         skillsList.innerHTML = `
@@ -340,10 +422,10 @@ function updateSkillsList() {
             </div>
             ${skill.builtIn ? '<span class="skill-item-badge">Integriert</span>' : `
             <div class="skill-item-actions">
-                <button class="edit-skill" title="Bearbeiten">
+                <button class="edit-skill" title="Bearbeiten" aria-label="Skill bearbeiten">
                     <span class="material-symbols-outlined">edit</span>
                 </button>
-                <button class="delete-skill" title="Löschen">
+                <button class="delete-skill" title="Löschen" aria-label="Skill löschen">
                     <span class="material-symbols-outlined">delete</span>
                 </button>
             </div>`}
@@ -435,15 +517,76 @@ async function deleteSkill(skillId) {
     }
 }
 
+// ========================================
+// Modals
+// ========================================
+
+function openSettings() {
+    const settingsModal = document.getElementById('settingsModal');
+    const memoryToggle = document.getElementById('memoryToggle');
+
+    UI.updateProviderUI();
+    UI.updateBannerVisibility();
+
+    if (memoryToggle) memoryToggle.checked = state.isMemoryEnabled;
+
+    settingsModal?.classList.add('active');
+}
+
+function closeSettings() {
+    const settingsModal = document.getElementById('settingsModal');
+    settingsModal?.classList.remove('active');
+    showSuccess('Einstellungen gespeichert');
+}
+
+function openAccount() {
+    const accountModal = document.getElementById('accountModal');
+    const userNameInput = document.getElementById('userName');
+    const userHobbiesInput = document.getElementById('userHobbies');
+    const userInstructionsInput = document.getElementById('userInstructions');
+    const userAboutInput = document.getElementById('userAbout');
+
+    const p = state.personalization;
+    if (userNameInput) userNameInput.value = p.name;
+    if (userHobbiesInput) userHobbiesInput.value = p.hobbies;
+    if (userInstructionsInput) userInstructionsInput.value = p.instructions;
+    if (userAboutInput) userAboutInput.value = p.about;
+
+    UI.updateIncognitoUI();
+    accountModal?.classList.add('active');
+}
+
+function closeAccount() {
+    const accountModal = document.getElementById('accountModal');
+    accountModal?.classList.remove('active');
+    showSuccess('Profil gespeichert');
+}
+
 function openSkills() {
     updateSkillsList();
     const skillsModal = document.getElementById('skillsModal');
-    if (skillsModal) skillsModal.classList.add('active');
+    skillsModal?.classList.add('active');
 }
 
 function closeSkills() {
     const skillsModal = document.getElementById('skillsModal');
     skillsModal?.classList.remove('active');
+}
+
+function setupHistoryListeners() {
+    const closeHistoryModal = document.getElementById('closeHistoryModal');
+    closeHistoryModal?.addEventListener('click', closeHistory);
+}
+
+function openHistory() {
+    UI.updateChatList(loadChat, deleteChat);
+    const historyModal = document.getElementById('historyModal');
+    historyModal?.classList.add('active');
+}
+
+function closeHistory() {
+    const historyModal = document.getElementById('historyModal');
+    historyModal?.classList.remove('active');
 }
 
 function setupModalClosers() {
@@ -466,18 +609,74 @@ function setupModalClosers() {
     });
 
     document.addEventListener('keydown', (e) => {
-        if (e.key === 'Escape') {
-            if (slashDropdownVisible) {
-                hideSlashDropdown();
-                return;
-            }
-            closeBottomSheet();
-            if (settingsModal?.classList.contains('active')) closeSettings();
-            if (accountModal?.classList.contains('active')) closeAccount();
-            if (historyModal?.classList.contains('active')) closeHistory();
-            if (skillsModal?.classList.contains('active')) closeSkills();
+        if (e.key !== 'Escape') return;
+
+        if (slashDropdownVisible) {
+            hideSlashDropdown();
+            return;
         }
+        closeBottomSheet();
+        if (settingsModal?.classList.contains('active')) closeSettings();
+        if (accountModal?.classList.contains('active')) closeAccount();
+        if (historyModal?.classList.contains('active')) closeHistory();
+        if (skillsModal?.classList.contains('active')) closeSkills();
     });
+}
+
+async function loadChat(chatId) {
+    await summarizeCurrentChat();
+    if (await state.loadChat(chatId)) {
+        UI.clearChatArea();
+
+        state.conversationHistory.forEach(msg => {
+            const sender = msg.role === 'user' ? 'user' : 'bot';
+            const text = msg.content || (msg.parts && msg.parts[0] && msg.parts[0].text) || '';
+            UI.addMessage(text, sender);
+        });
+
+        if (state.conversationHistory.length > 0) {
+            setTimeout(() => {
+                const chatArea = document.getElementById('chatArea');
+                chatArea?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            }, 100);
+        }
+
+        closeHistory();
+        ensureScrollState();
+    }
+}
+
+async function deleteChat(chatId) {
+    const isCurrent = await state.deleteChat(chatId);
+    if (isCurrent) {
+        UI.clearChatArea();
+        UI.updateWelcomeScreen();
+    }
+    UI.updateChatList(loadChat, deleteChat);
+}
+
+async function handleNewChat() {
+    await summarizeCurrentChat();
+    await state.createNewChat();
+    UI.clearChatArea();
+    UI.updateWelcomeScreen();
+    ensureScrollState();
+    const messageInput = document.getElementById('messageInput');
+    messageInput?.focus();
+}
+
+async function summarizeCurrentChat() {
+    if (state.isMemoryEnabled &&
+        state.conversationHistory.length >= 2 &&
+        state.currentChatId &&
+        !state.allChats[state.currentChatId]?.wasSummarized) {
+
+        const summary = await generateSummary(state.conversationHistory);
+        if (summary) {
+            await state.appendMemory(summary);
+            await state.markAsSummarized(state.currentChatId);
+        }
+    }
 }
 
 // ========================================
@@ -486,35 +685,17 @@ function setupModalClosers() {
 
 function parseSkillInvocation(response) {
     if (!response) return null;
-    
-    // More flexible regex that finds SKILL tags anywhere in the response
-    // Matches: [SKILL:skill-id:params] or [SKILL:skill-id]
+
     const skillRegex = /\[SKILL:([^:\]]+)(?::([^\]]+))?\]/;
     const match = response.match(skillRegex);
-    
+
     if (match) {
-        const skillId = match[1].trim();
-        const params = match[2] ? match[2].trim() : '';
-        console.log('Skill invocation parsed:', { skillId, params });
-        return { skillId, params };
+        return {
+            skillId: match[1].trim(),
+            params: match[2] ? match[2].trim() : ''
+        };
     }
-    
-    // Also check if response starts with skill tag (common pattern)
-    const startsWithSkill = response.trim().startsWith('[SKILL:');
-    if (startsWithSkill) {
-        const endBracket = response.indexOf(']');
-        if (endBracket > 0) {
-            const skillPart = response.substring(0, endBracket + 1);
-            const innerMatch = skillPart.match(/\[SKILL:([^:\]]+)(?::([^\]]+))?\]/);
-            if (innerMatch) {
-                const skillId = innerMatch[1].trim();
-                const params = innerMatch[2] ? innerMatch[2].trim() : '';
-                console.log('Skill invocation from start:', { skillId, params });
-                return { skillId, params };
-            }
-        }
-    }
-    
+
     return null;
 }
 
@@ -522,7 +703,7 @@ async function executeSkill(skillId, params) {
     if (skillId === 'web-search') {
         return await executeWebSearchSkill(params);
     }
-    
+
     const skill = state.getSkillById(skillId);
     if (skill && skill.prompt) {
         return {
@@ -530,22 +711,21 @@ async function executeSkill(skillId, params) {
             context: `[Skill "${skill.name}" aktiviert]\n\n${skill.prompt}\n\nBenutzeranfrage: ${params}`
         };
     }
-    
+
     return null;
 }
 
 async function executeWebSearchSkill(query) {
     const CORS_PROXY = 'https://api.allorigins.win/raw?url=';
     const ddgUrl = `https://duckduckgo.com/html/?q=${encodeURIComponent(query)}`;
-    
+
     try {
-        // Use CORS proxy to fetch DuckDuckGo HTML results
         const response = await fetch(CORS_PROXY + encodeURIComponent(ddgUrl));
         const html = await response.text();
-        
+
         const parser = new DOMParser();
         const doc = parser.parseFromString(html, 'text/html');
-        
+
         const results = [];
         doc.querySelectorAll('.result').forEach((result, index) => {
             if (index >= 5) return;
@@ -569,11 +749,9 @@ async function executeWebSearchSkill(query) {
                 results: results
             };
         }
-        
-        // Fallback: DuckDuckGo Instant Answer API
+
         return await executeWebSearchFallback(query);
     } catch (error) {
-        // Fallback on any error
         try {
             return await executeWebSearchFallback(query);
         } catch (fallbackError) {
@@ -585,9 +763,9 @@ async function executeWebSearchSkill(query) {
 async function executeWebSearchFallback(query) {
     const response = await fetch(`https://api.duckduckgo.com/?q=${encodeURIComponent(query)}&format=json&no_html=1`);
     const data = await response.json();
-    
+
     const results = [];
-    
+
     if (data.Abstract) {
         results.push({
             title: data.Heading || query,
@@ -595,7 +773,7 @@ async function executeWebSearchFallback(query) {
             snippet: data.Abstract
         });
     }
-    
+
     if (data.RelatedTopics) {
         for (const topic of data.RelatedTopics.slice(0, 4)) {
             if (topic.Text) {
@@ -607,11 +785,11 @@ async function executeWebSearchFallback(query) {
             }
         }
     }
-    
+
     if (results.length === 0) {
         return { type: 'search-results', context: `Keine detaillierten Ergebnisse für "${query}" gefunden. Bitte versuche eine spezifischere Suche.`, results: [] };
     }
-    
+
     const resultText = results.map((r, i) => `${i+1}. **${r.title}**\n   URL: ${r.url}\n   ${r.snippet}`).join('\n\n');
     return {
         type: 'search-results',
@@ -624,8 +802,6 @@ async function executeWebSearchFallback(query) {
 // Slash Command System
 // ========================================
 
-let slashDropdownVisible = false;
-
 function setupSlashCommands() {
     const messageInput = document.getElementById('messageInput');
     const slashHint = document.getElementById('slashHint');
@@ -636,12 +812,8 @@ function setupSlashCommands() {
         const cursorPos = messageInput.selectionStart;
 
         const textBeforeCursor = value.substring(0, cursorPos);
-        
-        // Check if cursor is right after a slash command start (at end of input or followed by space)
-        // Match patterns like: "/" or "/w" or "/web" but not "/web search"
         const slashMatch = textBeforeCursor.match(/\/(\S*)$/);
 
-        // Show/hide slash hint
         if (slashHint) {
             if (textBeforeCursor.trim() === '/') {
                 slashHint.classList.remove('hidden');
@@ -650,7 +822,7 @@ function setupSlashCommands() {
             }
         }
 
-        if (slashMatch && slashMatch[0].length <= 30) { // Prevent very long matches
+        if (slashMatch && slashMatch[0].length <= 30) {
             const filter = slashMatch[1].toLowerCase();
             showSlashDropdown(filter);
         } else {
@@ -658,17 +830,13 @@ function setupSlashCommands() {
         }
     });
 
-    // Hide hint on blur
-    messageInput.addEventListener('blur', () => {
-        if (slashHint && !slashDropdownVisible) {
-            slashHint.classList.add('hidden');
-        }
-    });
-    
-    // Also hide dropdown on blur after a short delay
     messageInput.addEventListener('blur', () => {
         setTimeout(() => {
             hideSlashDropdown();
+            const slashHint = document.getElementById('slashHint');
+            if (slashHint && !messageInput.value.includes('/')) {
+                slashHint.classList.add('hidden');
+            }
         }, 200);
     });
 }
@@ -678,18 +846,12 @@ function showSlashDropdown(filter) {
     if (!dropdown) return;
 
     const allSkills = state.getActiveSkills();
-    
-    // Debug logging
-    console.log('showSlashDropdown - filter:', filter, 'skills:', allSkills);
-    
     const filtered = allSkills.filter(skill => {
         const name = skill.name.toLowerCase();
         const id = skill.id.toLowerCase();
         const desc = (skill.description || '').toLowerCase();
         return name.includes(filter) || id.includes(filter) || desc.includes(filter);
     });
-
-    console.log('showSlashDropdown - filtered:', filtered);
 
     if (filtered.length === 0) {
         hideSlashDropdown();
@@ -753,9 +915,12 @@ function extractSlashCommand(message) {
 // ========================================
 
 async function handleSendMessage() {
+    if (isSending) return;
+
     const messageInput = document.getElementById('messageInput');
     const message = messageInput?.value.trim();
-    if (!message || message === '') return;
+
+    if (!message && attachedFiles.length === 0) return;
 
     hideSlashDropdown();
 
@@ -765,22 +930,22 @@ async function handleSendMessage() {
 
     const isFirstMessage = state.conversationHistory.length === 0;
 
-    // Check for slash command
     const slashCmd = extractSlashCommand(message);
     let displayMessage = message;
-    let forcedSkill = null;
 
-    if (slashCmd) {
-        forcedSkill = slashCmd.skill;
-        displayMessage = message;
+    if (!displayMessage && attachedFiles.length > 0) {
+        displayMessage = attachedFiles.map(a => a.name).join(', ');
     }
 
-    UI.addMessage(displayMessage, 'user');
+    const images = attachedFiles.filter(a => a.type === 'image').map(a => a.dataUrl);
+    UI.addMessage(displayMessage, 'user', images.length > 0 ? images : null);
+
     if (messageInput) {
         messageInput.value = '';
         autoResizeTextarea(messageInput);
     }
-    
+
+    const attachmentsSnapshot = [...attachedFiles];
     attachedFiles = [];
     const attachedFilesEl = document.getElementById('attachedFiles');
     if (attachedFilesEl) {
@@ -801,48 +966,55 @@ async function handleSendMessage() {
         return;
     }
 
-    const loadingMessage = UI.addLoadingMessage();
+    isSending = true;
+    const sendButton = document.getElementById('sendButton');
+    if (sendButton) sendButton.disabled = true;
+
     const provider = PROVIDERS[state.activeProvider];
+    const streamingMsg = UI.addStreamingMessage();
+    let fullText = '';
 
     try {
-        let userQuery = slashCmd ? slashCmd.message : message;
+        const userQuery = slashCmd ? slashCmd.message : message;
 
-        // If a slash command forced a skill, execute it directly
-        if (forcedSkill) {
-            loadingMessage.remove();
-            await handleForcedSkillExecution(forcedSkill, userQuery);
+        if (slashCmd) {
+            streamingMsg.remove();
+            await runSkillExecution(slashCmd.skill.id, userQuery, userQuery, true);
             return;
         }
 
-        // Normal flow: let AI decide
-        const response = await sendToAI(userQuery);
-        loadingMessage.remove();
+        const response = await streamToAI(userQuery, attachmentsSnapshot, (chunk) => {
+            fullText += chunk;
+            UI.updateStreamingMessage(streamingMsg, fullText);
+        });
 
-        // Check if the AI wants to invoke a skill
         const skillInvocation = parseSkillInvocation(response);
         if (skillInvocation) {
-            await handleSkillExecution(skillInvocation, userQuery);
+            streamingMsg.remove();
+            // Skill-Tag-Antwort nicht in der Chat-History speichern
+            state.conversationHistory.pop();
+            await runSkillExecution(skillInvocation.skillId, skillInvocation.params, userQuery);
         } else {
-            UI.addMessage(response, 'bot');
+            UI.finalizeStreamingMessage(streamingMsg, response);
             await state.saveCurrentChat();
         }
     } catch (error) {
-        loadingMessage.remove();
+        streamingMsg.remove();
         UI.addMessage(`Fehler: ${error.message}`, 'bot');
         showApiError(error, provider?.name || 'Provider');
+    } finally {
+        isSending = false;
+        if (sendButton) sendButton.disabled = false;
+        ensureScrollState();
     }
 }
 
-async function handleSkillExecution(skillInvocation, originalQuery) {
-    const { skillId, params } = skillInvocation;
-    
-    console.log('handleSkillExecution called with:', { skillId, params, originalQuery });
-
-    // Show a subtle indicator that a skill is being used
-    const skillIndicator = document.createElement('div');
-    skillIndicator.className = 'message bot-message skill-indicator';
+async function runSkillExecution(skillId, params, userQuery, isForced = false) {
     const skill = state.getSkillById(skillId);
     const skillName = skill ? skill.name : skillId;
+
+    const skillIndicator = document.createElement('div');
+    skillIndicator.className = 'message bot-message skill-indicator';
     skillIndicator.innerHTML = `
         <div class="skill-usage-badge">
             <span class="material-symbols-outlined">auto_awesome</span>
@@ -857,8 +1029,6 @@ async function handleSkillExecution(skillInvocation, originalQuery) {
 
     const result = await executeSkill(skillId, params);
     skillIndicator.remove();
-    
-    console.log('Skill execution result:', result);
 
     if (!result) {
         UI.addMessage('Skill konnte nicht ausgeführt werden.', 'bot');
@@ -866,179 +1036,30 @@ async function handleSkillExecution(skillInvocation, originalQuery) {
         return;
     }
 
-    // Feed results back to AI
-    const loadingMessage = UI.addLoadingMessage();
-    try {
-        let followUp;
-        if (result.type === 'search-results') {
-            followUp = `Hier sind die Ergebnisse der Web-Suche:\n\n${result.context}\n\nBeantworte jetzt die ursprüngliche Frage des Benutzers basierend auf diesen Suchergebnissen. Verwende KEINEN [SKILL:...] Tag mehr.`;
-        } else if (result.type === 'prompt-inject') {
-            followUp = result.context + '\n\nVerwende KEINEN [SKILL:...] Tag mehr.';
-        }
+    let followUp;
+    if (result.type === 'search-results') {
+        followUp = isForced
+            ? `Der Benutzer hat explizit eine Web-Suche angefordert für: "${userQuery}"\n\nHier sind die Suchergebnisse:\n\n${result.context}\n\nBeantworte die Frage des Benutzers basierend auf diesen Ergebnissen. Verwende KEINEN [SKILL:...] Tag.`
+            : `Hier sind die Ergebnisse der Web-Suche:\n\n${result.context}\n\nBeantworte jetzt die ursprüngliche Frage des Benutzers basierend auf diesen Suchergebnissen. Verwende KEINEN [SKILL:...] Tag mehr.`;
+    } else if (result.type === 'prompt-inject') {
+        followUp = result.context + '\n\nVerwende KEINEN [SKILL:...] Tag mehr.';
+    }
 
-        const finalResponse = await sendToAI(followUp);
-        loadingMessage.remove();
-        UI.addMessage(finalResponse, 'bot');
+    const streamingMsg = UI.addStreamingMessage();
+    let fullText = '';
+
+    try {
+        const finalResponse = await streamToAI(followUp, [], (chunk) => {
+            fullText += chunk;
+            UI.updateStreamingMessage(streamingMsg, fullText);
+        }, false);
+        UI.finalizeStreamingMessage(streamingMsg, finalResponse);
         await state.saveCurrentChat();
     } catch (error) {
-        loadingMessage.remove();
+        streamingMsg.remove();
         UI.addMessage(`Fehler bei der Verarbeitung: ${error.message}`, 'bot');
         showApiError(error, 'Skill-Ausführung');
     }
-}
-
-async function handleForcedSkillExecution(skill, query) {
-    const skillIndicator = document.createElement('div');
-    skillIndicator.className = 'message bot-message skill-indicator';
-    skillIndicator.innerHTML = `
-        <div class="skill-usage-badge">
-            <span class="material-symbols-outlined">auto_awesome</span>
-            <span>${escapeHtml(skill.name)} wird verwendet...</span>
-        </div>
-    `;
-    const chatArea = document.getElementById('chatArea');
-    chatArea.appendChild(skillIndicator);
-    
-    const chatMessages = document.getElementById('chatMessages');
-    chatMessages.scrollTop = chatMessages.scrollHeight;
-
-    const result = await executeSkill(skill.id, query);
-    skillIndicator.remove();
-
-    if (!result) {
-        UI.addMessage('Skill konnte nicht ausgeführt werden.', 'bot');
-        await state.saveCurrentChat();
-        return;
-    }
-
-    const loadingMessage = UI.addLoadingMessage();
-    try {
-        let followUp;
-        if (result.type === 'search-results') {
-            followUp = `Der Benutzer hat explizit eine Web-Suche angefordert für: "${query}"\n\nHier sind die Suchergebnisse:\n\n${result.context}\n\nBeantworte die Frage des Benutzers basierend auf diesen Ergebnissen. Verwende KEINEN [SKILL:...] Tag.`;
-        } else if (result.type === 'prompt-inject') {
-            followUp = result.context + '\n\nVerwende KEINEN [SKILL:...] Tag.';
-        }
-
-        const finalResponse = await sendToAI(followUp);
-        loadingMessage.remove();
-        UI.addMessage(finalResponse, 'bot');
-        await state.saveCurrentChat();
-    } catch (error) {
-        loadingMessage.remove();
-        UI.addMessage(`Fehler: ${error.message}`, 'bot');
-    }
-}
-
-async function handleNewChat() {
-    await summarizeCurrentChat();
-    await state.createNewChat();
-    UI.clearChatArea();
-    UI.updateWelcomeScreen();
-    ensureScrollState();
-    const messageInput = document.getElementById('messageInput');
-    messageInput?.focus();
-}
-
-async function summarizeCurrentChat() {
-    if (state.isMemoryEnabled &&
-        state.conversationHistory.length >= 2 &&
-        state.currentChatId &&
-        !state.allChats[state.currentChatId]?.wasSummarized) {
-
-        console.log('Generating summary for memory...');
-        const summary = await generateSummary(state.conversationHistory);
-        if (summary) {
-            console.log('Summary generated:', summary);
-            await state.appendMemory(summary);
-            await state.markAsSummarized(state.currentChatId);
-        }
-    }
-}
-
-function openSettings() {
-    const settingsModal = document.getElementById('settingsModal');
-    const memoryToggle = document.getElementById('memoryToggle');
-
-    currentProviderId = state.activeProvider;
-    UI.updateProviderUI();
-    UI.updateBannerVisibility();
-
-    if (memoryToggle) memoryToggle.checked = state.isMemoryEnabled;
-
-    settingsModal?.classList.add('active');
-}
-
-function closeSettings() {
-    const settingsModal = document.getElementById('settingsModal');
-    settingsModal?.classList.remove('active');
-    showSuccess('Einstellungen gespeichert');
-}
-
-function openAccount() {
-    const accountModal = document.getElementById('accountModal');
-    const userNameInput = document.getElementById('userName');
-    const userHobbiesInput = document.getElementById('userHobbies');
-    const userInstructionsInput = document.getElementById('userInstructions');
-    const userAboutInput = document.getElementById('userAbout');
-
-    const p = state.personalization;
-    if (userNameInput) userNameInput.value = p.name;
-    if (userHobbiesInput) userHobbiesInput.value = p.hobbies;
-    if (userInstructionsInput) userInstructionsInput.value = p.instructions;
-    if (userAboutInput) userAboutInput.value = p.about;
-
-    UI.updateIncognitoUI();
-    accountModal?.classList.add('active');
-}
-
-function closeAccount() {
-    const accountModal = document.getElementById('accountModal');
-    accountModal?.classList.remove('active');
-    showSuccess('Profil gespeichert');
-}
-
-function openHistory() {
-    UI.updateChatList(loadChat, deleteChat);
-    const historyModal = document.getElementById('historyModal');
-    historyModal?.classList.add('active');
-}
-
-function closeHistory() {
-    const historyModal = document.getElementById('historyModal');
-    historyModal?.classList.remove('active');
-}
-
-async function loadChat(chatId) {
-    await summarizeCurrentChat();
-    if (await state.loadChat(chatId)) {
-        UI.clearChatArea();
-
-        state.conversationHistory.forEach(msg => {
-            const sender = msg.role === 'user' ? 'user' : 'bot';
-            const text = msg.content || (msg.parts && msg.parts[0] && msg.parts[0].text) || '';
-            UI.addMessage(text, sender);
-        });
-
-        if (state.conversationHistory.length > 0) {
-            setTimeout(() => {
-                const chatArea = document.getElementById('chatArea');
-                chatArea?.scrollIntoView({ behavior: 'smooth', block: 'start' });
-            }, 100);
-        }
-
-        closeHistory();
-        ensureScrollState();
-    }
-}
-
-async function deleteChat(chatId) {
-    const isCurrent = await state.deleteChat(chatId);
-    if (isCurrent) {
-        UI.clearChatArea();
-        UI.updateWelcomeScreen();
-    }
-    UI.updateChatList(loadChat, deleteChat);
 }
 
 document.addEventListener('DOMContentLoaded', init);
