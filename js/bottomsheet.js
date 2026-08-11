@@ -4,6 +4,7 @@ import { setupKeyboardNavigation } from './toast.js';
 
 let currentBottomSheet = null;
 let onCloseCallback = null;
+let cleanupKeyboard = null;
 
 export function showBottomSheet(options) {
     const { title, content, onClose, searchable = false, searchPlaceholder = 'Suchen...' } = options;
@@ -72,6 +73,10 @@ export function closeBottomSheet() {
         }, 300);
     }
     currentBottomSheet = null;
+    if (cleanupKeyboard) {
+        cleanupKeyboard();
+        cleanupKeyboard = null;
+    }
     if (onCloseCallback) {
         onCloseCallback();
         onCloseCallback = null;
@@ -109,7 +114,7 @@ export function showProviderSelect(currentProvider, onSelect) {
         });
     });
 
-    setupKeyboardNavigation(sheet.overlay, Array.from(items), (providerId) => {
+    cleanupKeyboard = setupKeyboardNavigation(sheet.overlay, Array.from(items), (providerId) => {
         onSelect(providerId);
         closeBottomSheet();
     }, closeBottomSheet);
@@ -203,7 +208,7 @@ export function showModelSelect(providerId, currentModel, onSelect) {
         });
     });
 
-    setupKeyboardNavigation(sheet.overlay, Array.from(items), (modelId) => {
+    cleanupKeyboard = setupKeyboardNavigation(sheet.overlay, Array.from(items), (modelId) => {
         onSelect(modelId);
         closeBottomSheet();
     }, closeBottomSheet);

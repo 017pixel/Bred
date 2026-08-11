@@ -75,7 +75,7 @@ export function showApiError(error, providerName) {
 
 export function setupKeyboardNavigation(container, items, onSelect, onClose) {
     let focusedIndex = -1;
-    
+
     function updateFocus() {
         items.forEach((item, index) => {
             if (index === focusedIndex) {
@@ -86,7 +86,7 @@ export function setupKeyboardNavigation(container, items, onSelect, onClose) {
             }
         });
     }
-    
+
     function handleKeydown(e) {
         switch (e.key) {
             case 'ArrowDown':
@@ -113,7 +113,7 @@ export function setupKeyboardNavigation(container, items, onSelect, onClose) {
                 break;
         }
     }
-    
+
     items.forEach((item, index) => {
         item.setAttribute('tabindex', '0');
         item.addEventListener('focus', () => {
@@ -125,9 +125,9 @@ export function setupKeyboardNavigation(container, items, onSelect, onClose) {
             updateFocus();
         });
     });
-    
+
     document.addEventListener('keydown', handleKeydown);
-    
+
     return () => {
         document.removeEventListener('keydown', handleKeydown);
         items.forEach(item => item.classList.remove('focused'));

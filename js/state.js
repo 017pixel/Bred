@@ -65,15 +65,12 @@ class StateManager {
             }
 
             this.skills = await db.getAllSkills() || {};
-            console.log('Skills from DB:', Object.keys(this.skills));
-            
             await this.loadBuiltInSkills();
         } catch (e) {
             console.error('Error loading data from DB:', e);
         }
 
         this.isInitialized = true;
-        console.log('State initialized. Active provider:', this.activeProvider, 'Has key:', this.hasActiveProviderKey());
     }
 
     async loadBuiltInSkills() {
@@ -115,8 +112,6 @@ class StateManager {
                 this.skills[skill.id] = skill;
             }
         }
-        
-        console.log('Built-in Skills loaded:', Object.keys(this.skills));
     }
 
     async migrateFromLocalStorage() {
@@ -124,7 +119,6 @@ class StateManager {
         const hasNewFormat = await db.getSetting(CONFIG.STORAGE_KEYS.PROVIDER_KEYS);
         
         if (oldKey && !hasNewFormat) {
-            console.log('Migrating from old format...');
             this.providerKeys.groq = oldKey;
             await db.setSetting(CONFIG.STORAGE_KEYS.PROVIDER_KEYS, this.providerKeys);
             
@@ -139,8 +133,6 @@ class StateManager {
         const hasIndexedDB = (await db.getAllChats() && Object.keys(await db.getAllChats()).length > 0);
 
         if (hasLocalStorage && !hasIndexedDB) {
-            console.log('Migrating data from localStorage to IndexedDB...');
-
             await db.setSetting(CONFIG.STORAGE_KEYS.ACTIVE_PROVIDER, localStorage.getItem('bred_active_provider') || 'groq');
             await db.setSetting(CONFIG.STORAGE_KEYS.INCOGNITO, localStorage.getItem('chatbot_incognito') === 'true');
             await db.setSetting(CONFIG.STORAGE_KEYS.CURRENT_CHAT, localStorage.getItem('chatbot_current_chat'));
@@ -319,7 +311,10 @@ class StateManager {
     }
 
     getActiveSkills() {
-        return Object.values(this.skills);
+        return Object.values(this.skills).sort((a, b) => {
+            if (a.builtIn !== b.builtIn) return a.builtIn ? -1 : 1;
+            return a.name.localeCompare(b.name, 'de');
+        });
     }
 
     getSkillsPrompt() {
