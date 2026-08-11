@@ -56,40 +56,97 @@ export const PROVIDERS = {
         models: [],
         defaultModel: 'meta-llama/llama-3.3-70b-instruct',
         headers: {
-            'HTTP-Referer': window.location.origin,
             'X-Title': 'BREAD AI'
         },
         categories: [
             { name: 'OpenAI', models: [
+                { id: 'openai/gpt-4.1', name: 'GPT-4.1' },
+                { id: 'openai/gpt-4.1-mini', name: 'GPT-4.1 Mini' },
                 { id: 'openai/gpt-4o', name: 'GPT-4o' },
-                { id: 'openai/gpt-4o-mini', name: 'GPT-4o Mini' },
-                { id: 'openai/o1-preview', name: 'o1 Preview' },
-                { id: 'openai/o1-mini', name: 'o1 Mini' }
+                { id: 'openai/o3-mini', name: 'o3 Mini' }
             ]},
             { name: 'Anthropic', models: [
-                { id: 'anthropic/claude-4.6-sonnet', name: 'Claude 4.6 Sonnet' },
-                { id: 'anthropic/claude-4.5-sonnet', name: 'Claude 4.5 Sonnet' },
-                { id: 'anthropic/claude-3.5-haiku', name: 'Claude 3.5 Haiku' }
+                { id: 'anthropic/claude-sonnet-5', name: 'Claude Sonnet 5' },
+                { id: 'anthropic/claude-sonnet-4.5', name: 'Claude Sonnet 4.5' },
+                { id: 'anthropic/claude-opus-5', name: 'Claude Opus 5' }
             ]},
             { name: 'Google', models: [
-                { id: 'google/gemini-2.5-pro-preview', name: 'Gemini 2.5 Pro' },
-                { id: 'google/gemini-2.5-flash-preview', name: 'Gemini 2.5 Flash' },
-                { id: 'google/gemini-2.0-flash-001', name: 'Gemini 2.0 Flash' }
+                { id: 'google/gemini-2.5-pro', name: 'Gemini 2.5 Pro' },
+                { id: 'google/gemini-2.5-flash', name: 'Gemini 2.5 Flash' },
+                { id: 'google/gemini-2.5-flash-lite', name: 'Gemini 2.5 Flash Lite' }
             ]},
             { name: 'Meta', models: [
                 { id: 'meta-llama/llama-3.3-70b-instruct', name: 'Llama 3.3 70B' },
-                { id: 'meta-llama/llama-3.1-8b-instruct', name: 'Llama 3.1 8B' },
-                { id: 'meta-llama/llama-4-scout-17b-16e-instruct', name: 'Llama 4 Scout' }
+                { id: 'meta-llama/llama-4-maverick', name: 'Llama 4 Maverick' },
+                { id: 'meta-llama/llama-4-scout', name: 'Llama 4 Scout' }
             ]},
             { name: 'DeepSeek', models: [
                 { id: 'deepseek/deepseek-r1', name: 'DeepSeek R1' },
-                { id: 'deepseek/deepseek-chat-v3-0324', name: 'DeepSeek V3' }
+                { id: 'deepseek/deepseek-chat-v3.1', name: 'DeepSeek V3.1' }
             ]},
             { name: 'Mistral', models: [
-                { id: 'mistralai/mistral-large-2411', name: 'Mistral Large' },
-                { id: 'mistralai/mistral-small-24b-instruct-2501', name: 'Mistral Small 24B' }
+                { id: 'mistralai/mistral-small-3.2-24b-instruct', name: 'Mistral Small 3.2' },
+                { id: 'mistralai/mistral-large-2411', name: 'Mistral Large' }
             ]}
         ]
+    },
+    'opencode-go': {
+        id: 'opencode-go',
+        name: 'OpenCode Go',
+        url: 'https://opencode.ai/zen/go/v1/chat/completions',
+        keyUrl: 'https://opencode.ai/auth',
+        icon: 'rocket_launch',
+        color: '#5aa7e0',
+        models: [
+            { id: 'deepseek-v4-flash', name: 'DeepSeek V4 Flash', category: 'DeepSeek' },
+            { id: 'deepseek-v4-pro', name: 'DeepSeek V4 Pro', category: 'DeepSeek' },
+            { id: 'glm-5.2', name: 'GLM 5.2', category: 'Z.ai' },
+            { id: 'glm-5.1', name: 'GLM 5.1', category: 'Z.ai' },
+            { id: 'kimi-k3', name: 'Kimi K3', category: 'Moonshot' },
+            { id: 'kimi-k2.6', name: 'Kimi K2.6', category: 'Moonshot' },
+            { id: 'kimi-k2.7-code', name: 'Kimi K2.7 Code', category: 'Moonshot' },
+            { id: 'grok-4.5', name: 'Grok 4.5', category: 'xAI' },
+            { id: 'mimo-v2.5', name: 'MiMo V2.5', category: 'Xiaomi' },
+            { id: 'hy3', name: 'Hy3', category: 'DeepSeek' }
+        ],
+        defaultModel: 'deepseek-v4-flash'
+    },
+    'opencode-zen': {
+        id: 'opencode-zen',
+        name: 'OpenCode Zen',
+        url: 'https://opencode.ai/zen/v1/chat/completions',
+        keyUrl: 'https://opencode.ai/auth',
+        icon: 'workspace_premium',
+        color: '#8b7cf8',
+        models: [
+            { id: 'deepseek-v4-flash', name: 'DeepSeek V4 Flash', category: 'DeepSeek' },
+            { id: 'deepseek-v4-pro', name: 'DeepSeek V4 Pro', category: 'DeepSeek' },
+            { id: 'deepseek-v4-flash-free', name: 'DeepSeek V4 Flash Free', category: 'DeepSeek', free: true },
+            { id: 'glm-5.2', name: 'GLM 5.2', category: 'Z.ai' },
+            { id: 'glm-5.1', name: 'GLM 5.1', category: 'Z.ai' },
+            { id: 'minimax-m3', name: 'MiniMax M3', category: 'MiniMax' },
+            { id: 'minimax-m2.7', name: 'MiniMax M2.7', category: 'MiniMax' },
+            { id: 'kimi-k3', name: 'Kimi K3', category: 'Moonshot' },
+            { id: 'kimi-k2.6', name: 'Kimi K2.6', category: 'Moonshot' }
+        ],
+        defaultModel: 'deepseek-v4-flash'
+    },
+    mistral: {
+        id: 'mistral',
+        name: 'Mistral',
+        url: 'https://api.mistral.ai/v1/chat/completions',
+        keyUrl: 'https://console.mistral.ai',
+        icon: 'air',
+        color: '#ff7000',
+        models: [
+            { id: 'mistral-medium-2604', name: 'Mistral Medium 3.5', category: 'Mistral' },
+            { id: 'mistral-large-2512', name: 'Mistral Large 3', category: 'Mistral' },
+            { id: 'mistral-small-2603', name: 'Mistral Small 4', category: 'Mistral' },
+            { id: 'codestral-2508', name: 'Codestral', category: 'Mistral' },
+            { id: 'ministral-14b-2512', name: 'Ministral 3 14B', category: 'Mistral' },
+            { id: 'ministral-8b-2512', name: 'Ministral 3 8B', category: 'Mistral' }
+        ],
+        defaultModel: 'mistral-medium-2604'
     }
 };
 

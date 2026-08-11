@@ -10,7 +10,6 @@
 
 const DB_NAME = 'BreadAIDB';
 const DB_VERSION = 2;
-const DB_VERSION_KEY = 'bread_db_version';
 
 const STORE_CHATS = 'chats';
 const STORE_SETTINGS = 'settings';
@@ -30,21 +29,7 @@ class Database {
         return this._initPromise;
     }
 
-    async _checkVersionAndReset() {
-        const storedVersion = localStorage.getItem(DB_VERSION_KEY);
-        
-        if (!storedVersion || parseInt(storedVersion) < DB_VERSION) {
-            console.log('Database version changed or first run. Resetting...');
-            await this.resetDatabase();
-            localStorage.setItem(DB_VERSION_KEY, DB_VERSION.toString());
-            return true;
-        }
-        return false;
-    }
-
     async _doInit() {
-        await this._checkVersionAndReset();
-        
         return new Promise((resolve, reject) => {
             const request = indexedDB.open(DB_NAME, DB_VERSION);
 
@@ -55,27 +40,22 @@ class Database {
 
             request.onsuccess = (event) => {
                 this.db = event.target.result;
-                console.log('IndexedDB connected:', DB_NAME, 'v' + DB_VERSION);
                 resolve(this.db);
             };
 
             request.onupgradeneeded = (event) => {
                 const db = event.target.result;
-                console.log('IndexedDB upgrading from v' + event.oldVersion + ' to v' + DB_VERSION);
 
                 if (!db.objectStoreNames.contains(STORE_CHATS)) {
                     db.createObjectStore(STORE_CHATS, { keyPath: 'id' });
-                    console.log('Created store:', STORE_CHATS);
                 }
 
                 if (!db.objectStoreNames.contains(STORE_SETTINGS)) {
                     db.createObjectStore(STORE_SETTINGS);
-                    console.log('Created store:', STORE_SETTINGS);
                 }
 
                 if (!db.objectStoreNames.contains(STORE_SKILLS)) {
                     db.createObjectStore(STORE_SKILLS, { keyPath: 'id' });
-                    console.log('Created store:', STORE_SKILLS);
                 }
             };
         });
@@ -83,22 +63,21 @@ class Database {
 
     async _ensureStore(storeName) {
         await this.init();
-        
+
         if (!this.db.objectStoreNames.contains(storeName)) {
             console.warn('Store', storeName, 'does not exist. Recreating database...');
             await this.resetDatabase();
             await this.init();
         }
-        
+
         return storeName;
     }
 
     async resetDatabase() {
         return new Promise((resolve, reject) => {
             const request = indexedDB.deleteDatabase(DB_NAME);
-            
+
             request.onsuccess = () => {
-                console.log('IndexedDB deleted:', DB_NAME);
                 this.db = null;
                 this._initPromise = null;
                 resolve();

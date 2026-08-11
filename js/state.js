@@ -2,21 +2,19 @@ import { CONFIG } from './config.js';
 import { db } from './db.js';
 import { PROVIDERS, getDefaultModel } from './providers.js';
 
+const DEFAULT_PROVIDER_KEYS = Object.fromEntries(
+    Object.keys(PROVIDERS).map(id => [id, ''])
+);
+
+const DEFAULT_MODELS = Object.fromEntries(
+    Object.keys(PROVIDERS).map(id => [id, getDefaultModel(id)])
+);
+
 class StateManager {
     constructor() {
-        this.providerKeys = {
-            groq: '',
-            cerebras: '',
-            nvidia: '',
-            openrouter: ''
-        };
+        this.providerKeys = { ...DEFAULT_PROVIDER_KEYS };
         this.activeProvider = 'groq';
-        this.selectedModels = {
-            groq: 'llama-3.3-70b-versatile',
-            cerebras: 'gpt-oss-120b',
-            nvidia: 'meta/llama-3.3-70b-instruct',
-            openrouter: 'meta-llama/llama-3.3-70b-instruct'
-        };
+        this.selectedModels = { ...DEFAULT_MODELS };
         this.conversationHistory = [];
         this.allChats = {};
         this.currentChatId = null;
@@ -49,9 +47,14 @@ class StateManager {
         }
 
         try {
-            this.providerKeys = await db.getSetting(CONFIG.STORAGE_KEYS.PROVIDER_KEYS) || this.providerKeys;
+            // Bestehende Einstellungen mit den Defaults mergen, damit neue
+            // Provider auch für Bestandsnutzer ohne Migration verfügbar sind
+            const savedKeys = await db.getSetting(CONFIG.STORAGE_KEYS.PROVIDER_KEYS) || {};
+            const savedModels = await db.getSetting(CONFIG.STORAGE_KEYS.MODELS) || {};
+
+            this.providerKeys = { ...DEFAULT_PROVIDER_KEYS, ...savedKeys };
             this.activeProvider = await db.getSetting(CONFIG.STORAGE_KEYS.ACTIVE_PROVIDER) || 'groq';
-            this.selectedModels = await db.getSetting(CONFIG.STORAGE_KEYS.MODELS) || this.selectedModels;
+            this.selectedModels = { ...DEFAULT_MODELS, ...savedModels };
             this.isIncognito = await db.getSetting(CONFIG.STORAGE_KEYS.INCOGNITO) === true;
             this.isMemoryEnabled = await db.getSetting(CONFIG.STORAGE_KEYS.MEMORY_ENABLED) === true;
             this.memory = await db.getSetting(CONFIG.STORAGE_KEYS.MEMORY) || '';
@@ -65,15 +68,12 @@ class StateManager {
             }
 
             this.skills = await db.getAllSkills() || {};
-            console.log('Skills from DB:', Object.keys(this.skills));
-            
             await this.loadBuiltInSkills();
         } catch (e) {
             console.error('Error loading data from DB:', e);
         }
 
         this.isInitialized = true;
-        console.log('State initialized. Active provider:', this.activeProvider, 'Has key:', this.hasActiveProviderKey());
     }
 
     async loadBuiltInSkills() {
@@ -115,8 +115,6 @@ class StateManager {
                 this.skills[skill.id] = skill;
             }
         }
-        
-        console.log('Built-in Skills loaded:', Object.keys(this.skills));
     }
 
     async migrateFromLocalStorage() {
@@ -124,7 +122,6 @@ class StateManager {
         const hasNewFormat = await db.getSetting(CONFIG.STORAGE_KEYS.PROVIDER_KEYS);
         
         if (oldKey && !hasNewFormat) {
-            console.log('Migrating from old format...');
             this.providerKeys.groq = oldKey;
             await db.setSetting(CONFIG.STORAGE_KEYS.PROVIDER_KEYS, this.providerKeys);
             
@@ -139,8 +136,6 @@ class StateManager {
         const hasIndexedDB = (await db.getAllChats() && Object.keys(await db.getAllChats()).length > 0);
 
         if (hasLocalStorage && !hasIndexedDB) {
-            console.log('Migrating data from localStorage to IndexedDB...');
-
             await db.setSetting(CONFIG.STORAGE_KEYS.ACTIVE_PROVIDER, localStorage.getItem('bred_active_provider') || 'groq');
             await db.setSetting(CONFIG.STORAGE_KEYS.INCOGNITO, localStorage.getItem('chatbot_incognito') === 'true');
             await db.setSetting(CONFIG.STORAGE_KEYS.CURRENT_CHAT, localStorage.getItem('chatbot_current_chat'));
@@ -319,7 +314,10 @@ class StateManager {
     }
 
     getActiveSkills() {
-        return Object.values(this.skills);
+        return Object.values(this.skills).sort((a, b) => {
+            if (a.builtIn !== b.builtIn) return a.builtIn ? -1 : 1;
+            return a.name.localeCompare(b.name, 'de');
+        });
     }
 
     getSkillsPrompt() {

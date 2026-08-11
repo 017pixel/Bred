@@ -167,7 +167,7 @@
 }
 
 .user-greeting {
-    font-size: 80px;
+    font-size: 48px;
     font-weight: 800;
     color: var(--accent-primary);
     letter-spacing: -2px;
@@ -377,9 +377,35 @@
     transform: scale(0.95);
 }
 
+.send-btn-round:disabled {
+    opacity: 0.5;
+    cursor: default;
+    transform: none;
+}
+
+.send-btn-round:disabled:hover {
+    transform: none;
+    box-shadow: 0 4px 16px rgba(255, 255, 255, 0.1);
+}
+
 .send-btn-round .material-symbols-outlined {
     font-size: 22px;
     font-weight: bold;
+}
+
+.message-image-group {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-bottom: 12px;
+}
+
+.message-image-group .message-image {
+    max-width: 200px;
+    max-height: 200px;
+    object-fit: cover;
+    border-radius: var(--radius-md);
+    margin-bottom: 0;
 }
 
 .message-image {

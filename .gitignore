@@ -1,3 +1,5 @@
 nul
 .DS_Store
 Thumbs.db
+
+.playwright-mcp/

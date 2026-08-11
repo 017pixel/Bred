@@ -39,12 +39,12 @@
     }
 
     .user-greeting {
-        font-size: 42px;
+        font-size: 40px;
         line-height: 1;
     }
 
     .sub-greeting {
-        font-size: 28px;
+        font-size: 26px;
         line-height: 1.1;
     }
 
@@ -343,20 +343,6 @@
 }
 
 @media (min-width: 769px) {
-    .user-greeting {
-        font-size: 48px;
-        letter-spacing: -1px;
-    }
-
-    .sub-greeting {
-        font-size: 22px;
-        letter-spacing: -0.5px;
-    }
-
-    .welcome-heading {
-        gap: 16px;
-    }
-
     .orb {
         width: 700px;
         height: 700px;
