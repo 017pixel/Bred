@@ -4,7 +4,7 @@ Ein moderner, personalisierbarer KI-Chatbot mit Multi-Provider-Support als Progr
 
 ## Features
 
-- Multi-Provider-Support (Groq, Cerebras, NVIDIA NIM, OpenRouter)
+- Multi-Provider-Support (Groq, Cerebras, NVIDIA NIM, OpenRouter, OpenCode Go, OpenCode Zen, Mistral)
 - Streaming-Antworten für schnelle, flüssige Antworten
 - Dateianhänge: Bilder (Vision), Textdateien und PDFs werden an die KI gesendet
 - Personalisierung mit Namen, Hobbys und benutzerdefinierten Anweisungen

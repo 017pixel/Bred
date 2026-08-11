@@ -7,6 +7,7 @@
 - Dateianhänge werden jetzt wirklich an die KI gesendet (Bilder, Textdateien, PDFs)
 - PDF-Inhalte werden automatisch ausgelesen und mitgeschickt
 - Versionsanzeige in den Einstellungen hinzugefügt
+- Neue Anbieter: OpenCode Go, OpenCode Zen und Mistral mit aktuellen Modellen
 
 ### Verändert
 - Chat-Antworten erscheinen schneller und fließender durch Streaming

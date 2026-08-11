@@ -89,6 +89,64 @@ export const PROVIDERS = {
                 { id: 'mistralai/mistral-large-2411', name: 'Mistral Large' }
             ]}
         ]
+    },
+    'opencode-go': {
+        id: 'opencode-go',
+        name: 'OpenCode Go',
+        url: 'https://opencode.ai/zen/go/v1/chat/completions',
+        keyUrl: 'https://opencode.ai/auth',
+        icon: 'rocket_launch',
+        color: '#5aa7e0',
+        models: [
+            { id: 'deepseek-v4-flash', name: 'DeepSeek V4 Flash', category: 'DeepSeek' },
+            { id: 'deepseek-v4-pro', name: 'DeepSeek V4 Pro', category: 'DeepSeek' },
+            { id: 'glm-5.2', name: 'GLM 5.2', category: 'Z.ai' },
+            { id: 'glm-5.1', name: 'GLM 5.1', category: 'Z.ai' },
+            { id: 'kimi-k3', name: 'Kimi K3', category: 'Moonshot' },
+            { id: 'kimi-k2.6', name: 'Kimi K2.6', category: 'Moonshot' },
+            { id: 'kimi-k2.7-code', name: 'Kimi K2.7 Code', category: 'Moonshot' },
+            { id: 'grok-4.5', name: 'Grok 4.5', category: 'xAI' },
+            { id: 'mimo-v2.5', name: 'MiMo V2.5', category: 'Xiaomi' },
+            { id: 'hy3', name: 'Hy3', category: 'DeepSeek' }
+        ],
+        defaultModel: 'deepseek-v4-flash'
+    },
+    'opencode-zen': {
+        id: 'opencode-zen',
+        name: 'OpenCode Zen',
+        url: 'https://opencode.ai/zen/v1/chat/completions',
+        keyUrl: 'https://opencode.ai/auth',
+        icon: 'workspace_premium',
+        color: '#8b7cf8',
+        models: [
+            { id: 'deepseek-v4-flash', name: 'DeepSeek V4 Flash', category: 'DeepSeek' },
+            { id: 'deepseek-v4-pro', name: 'DeepSeek V4 Pro', category: 'DeepSeek' },
+            { id: 'deepseek-v4-flash-free', name: 'DeepSeek V4 Flash Free', category: 'DeepSeek', free: true },
+            { id: 'glm-5.2', name: 'GLM 5.2', category: 'Z.ai' },
+            { id: 'glm-5.1', name: 'GLM 5.1', category: 'Z.ai' },
+            { id: 'minimax-m3', name: 'MiniMax M3', category: 'MiniMax' },
+            { id: 'minimax-m2.7', name: 'MiniMax M2.7', category: 'MiniMax' },
+            { id: 'kimi-k3', name: 'Kimi K3', category: 'Moonshot' },
+            { id: 'kimi-k2.6', name: 'Kimi K2.6', category: 'Moonshot' }
+        ],
+        defaultModel: 'deepseek-v4-flash'
+    },
+    mistral: {
+        id: 'mistral',
+        name: 'Mistral',
+        url: 'https://api.mistral.ai/v1/chat/completions',
+        keyUrl: 'https://console.mistral.ai',
+        icon: 'air',
+        color: '#ff7000',
+        models: [
+            { id: 'mistral-medium-2604', name: 'Mistral Medium 3.5', category: 'Mistral' },
+            { id: 'mistral-large-2512', name: 'Mistral Large 3', category: 'Mistral' },
+            { id: 'mistral-small-2603', name: 'Mistral Small 4', category: 'Mistral' },
+            { id: 'codestral-2508', name: 'Codestral', category: 'Mistral' },
+            { id: 'ministral-14b-2512', name: 'Ministral 3 14B', category: 'Mistral' },
+            { id: 'ministral-8b-2512', name: 'Ministral 3 8B', category: 'Mistral' }
+        ],
+        defaultModel: 'mistral-medium-2604'
     }
 };
 

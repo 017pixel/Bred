@@ -2,21 +2,19 @@ import { CONFIG } from './config.js';
 import { db } from './db.js';
 import { PROVIDERS, getDefaultModel } from './providers.js';
 
+const DEFAULT_PROVIDER_KEYS = Object.fromEntries(
+    Object.keys(PROVIDERS).map(id => [id, ''])
+);
+
+const DEFAULT_MODELS = Object.fromEntries(
+    Object.keys(PROVIDERS).map(id => [id, getDefaultModel(id)])
+);
+
 class StateManager {
     constructor() {
-        this.providerKeys = {
-            groq: '',
-            cerebras: '',
-            nvidia: '',
-            openrouter: ''
-        };
+        this.providerKeys = { ...DEFAULT_PROVIDER_KEYS };
         this.activeProvider = 'groq';
-        this.selectedModels = {
-            groq: 'llama-3.3-70b-versatile',
-            cerebras: 'gpt-oss-120b',
-            nvidia: 'meta/llama-3.3-70b-instruct',
-            openrouter: 'meta-llama/llama-3.3-70b-instruct'
-        };
+        this.selectedModels = { ...DEFAULT_MODELS };
         this.conversationHistory = [];
         this.allChats = {};
         this.currentChatId = null;
@@ -49,9 +47,14 @@ class StateManager {
         }
 
         try {
-            this.providerKeys = await db.getSetting(CONFIG.STORAGE_KEYS.PROVIDER_KEYS) || this.providerKeys;
+            // Bestehende Einstellungen mit den Defaults mergen, damit neue
+            // Provider auch für Bestandsnutzer ohne Migration verfügbar sind
+            const savedKeys = await db.getSetting(CONFIG.STORAGE_KEYS.PROVIDER_KEYS) || {};
+            const savedModels = await db.getSetting(CONFIG.STORAGE_KEYS.MODELS) || {};
+
+            this.providerKeys = { ...DEFAULT_PROVIDER_KEYS, ...savedKeys };
             this.activeProvider = await db.getSetting(CONFIG.STORAGE_KEYS.ACTIVE_PROVIDER) || 'groq';
-            this.selectedModels = await db.getSetting(CONFIG.STORAGE_KEYS.MODELS) || this.selectedModels;
+            this.selectedModels = { ...DEFAULT_MODELS, ...savedModels };
             this.isIncognito = await db.getSetting(CONFIG.STORAGE_KEYS.INCOGNITO) === true;
             this.isMemoryEnabled = await db.getSetting(CONFIG.STORAGE_KEYS.MEMORY_ENABLED) === true;
             this.memory = await db.getSetting(CONFIG.STORAGE_KEYS.MEMORY) || '';
