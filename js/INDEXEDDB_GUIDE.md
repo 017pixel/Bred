@@ -60,11 +60,21 @@ const DB_VERSION = 3;
 
 **Why?** IndexedDB only runs the `onupgradeneeded` event when the version number is higher than what's stored in the browser. Without incrementing the version, new stores won't be created.
 
-The `_checkVersionAndReset()` method automatically handles version changes:
-- It stores the current DB_VERSION in localStorage (`bread_db_version`)
-- On each load, it compares the stored version with the current DB_VERSION
-- If the version changed, it resets the database (clears all data)
-- This ensures users get a fresh start after schema updates
+New stores are created in `onupgradeneeded` without deleting existing data. The upgrade path is additive:
+
+```javascript
+request.onupgradeneeded = (event) => {
+    const db = event.target.result;
+
+    if (!db.objectStoreNames.contains(STORE_CHATS)) {
+        db.createObjectStore(STORE_CHATS, { keyPath: 'id' });
+    }
+
+    // ... additional stores
+};
+```
+
+**Important:** Never reset the database on version changes. User chats and settings must survive upgrades.
 
 ### Rule 2: Check Before Using Stores
 
@@ -100,7 +110,7 @@ async getAllSkills() {
 }
 ```
 
-### Rule 4: Use the Reset Function
+### Rule 4: Use the Reset Function Only for Debugging
 
 If users experience issues, you can programmatically reset the database:
 
@@ -124,7 +134,7 @@ Or instruct users to:
 | Version | Changes |
 |---------|---------|
 | 1 | Initial version with chats, settings, skills stores |
-| 2 | Bug fixes, error handling, renamed DB to BreadAIDB, auto-version reset |
+| 2 | Bug fixes, error handling, renamed DB to BreadAIDB, additive upgrade without data loss |
 
 ---
 
@@ -135,9 +145,8 @@ Or instruct users to:
 **Cause**: The database was created with an older version that didn't include the 'skills' store.
 
 **Solution**:
-1. The system now automatically detects version changes and resets
+1. Increment `DB_VERSION` so `onupgradeneeded` creates the missing store
 2. If issue persists, manually clear IndexedDB in DevTools
-3. Or have user manually delete the database in DevTools
 
 ### Error: "The operation failed for an unknown reason"
 

@@ -37,7 +37,7 @@
 
 body {
     font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
-    font-size: 20px;
+    font-size: 16px;
     background: radial-gradient(circle at top, #1a1a1a 0%, #0a0a0a 100%);
     color: var(--text-primary);
     height: 100vh;
@@ -127,4 +127,22 @@ html {
 
 .chat-messages:not(.has-welcome)::-webkit-scrollbar-thumb:hover {
     background: rgba(124, 176, 138, 0.55);
+}
+
+/* Tastatur-Fokus sichtbar machen */
+:focus-visible {
+    outline: 2px solid var(--accent-primary);
+    outline-offset: 2px;
+}
+
+/* Bewegungsempfindliche Nutzer respektieren */
+@media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+        animation-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 0.01ms !important;
+        scroll-behavior: auto !important;
+    }
 }

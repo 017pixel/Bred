@@ -139,8 +139,13 @@
     animation: messageSlideIn 0.35s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
-.bot-message p {
+.bot-message p,
+.user-message p {
     margin: 0;
+}
+
+.user-message .message-image-group {
+    margin: -4px 0 10px;
 }
 
 .streaming-message {
@@ -243,17 +248,6 @@
 
 .loading-dots span:nth-child(2) {
     animation-delay: -0.16s;
-}
-
-@keyframes bounce {
-    0%, 80%, 100% {
-        transform: scale(0.8);
-        opacity: 0.5;
-    }
-    40% {
-        transform: scale(1.2);
-        opacity: 1;
-    }
 }
 
 .toggle-switch {
